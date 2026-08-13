@@ -1,0 +1,322 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  USER
+  TRAINER
+  ADMIN
+}
+
+enum TrainerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LiveClassCategory {
+  YOGA
+  ZUMBA
+  HIIT
+}
+
+enum LiveClassStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  BOOKED
+  CANCELLED
+  ATTENDED
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum DietGoal {
+  WEIGHT_LOSS
+  WEIGHT_GAIN
+  MUSCLE_GAIN
+  GENERAL_FITNESS
+}
+
+// ============================================================
+// USER
+// One User can have: one Profile, many TrainerApplications,
+// at most one Trainer record, many ClassBookings,
+// many Subscriptions, many Payments, many DietPlans (as creator)
+// ============================================================
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile             Profile?
+  trainerApplications TrainerApplication[]
+  trainer             Trainer?
+  classBookings       ClassBooking[]
+  subscriptions       Subscription[]
+  payments            Payment[]
+  dietPlans           DietPlan[]
+}
+
+// ============================================================
+// PROFILE
+// 1:1 with User. Cascades on User delete — no standalone meaning.
+// ============================================================
+
+model Profile {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  firstName   String
+  lastName    String?
+  phone       String?
+  avatarUrl   String?
+  dateOfBirth DateTime?
+  gender      String?
+  bio         String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// TRAINER APPLICATION
+// Submitting does NOT make user a Trainer — that is a separate,
+// manually-reviewed step. Cascades on User delete (identity record).
+// ============================================================
+
+model TrainerApplication {
+  id              String                   @id @default(uuid())
+  userId          String
+  bio             String?
+  specialization  String
+  experience      String?
+  certifications  String?
+  status          TrainerApplicationStatus @default(PENDING)
+  rejectionReason String?
+  reviewedAt      DateTime?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ============================================================
+// TRAINER
+// Created manually after application is APPROVED.
+// One Trainer per User (unique constraint on userId).
+// Cascades on User delete (extension of identity).
+// ============================================================
+
+model Trainer {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  bio             String?
+  specialization  String
+  experience      String?
+  certifications  String?
+  profileImageUrl String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  liveClasses LiveClass[]
+}
+
+// ============================================================
+// LIVE CLASS
+// Belongs to a Trainer. Trainer deletion is Restricted because
+// live classes may have existing bookings.
+// ============================================================
+
+model LiveClass {
+  id          String            @id @default(uuid())
+  trainerId   String
+  title       String
+  description String?
+  category    LiveClassCategory
+  startTime   DateTime
+  endTime     DateTime
+  capacity    Int
+  meetingUrl  String?
+  status      LiveClassStatus   @default(SCHEDULED)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  trainer       Trainer        @relation(fields: [trainerId], references: [id], onDelete: Restrict)
+  classBookings ClassBooking[]
+
+  @@index([trainerId])
+  @@index([category])
+  @@index([startTime])
+  @@index([status])
+}
+
+// ============================================================
+// CLASS BOOKING
+// Unique constraint on (userId, liveClassId) prevents duplicate bookings.
+// Both User and LiveClass deletions are Restricted — bookings are
+// historical business records.
+// ============================================================
+
+model ClassBooking {
+  id          String        @id @default(uuid())
+  userId      String
+  liveClassId String
+  status      BookingStatus @default(BOOKED)
+  bookedAt    DateTime      @default(now())
+  cancelledAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  liveClass LiveClass @relation(fields: [liveClassId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, liveClassId])
+  @@index([userId])
+  @@index([liveClassId])
+}
+
+// ============================================================
+// SUBSCRIPTION PLAN
+// Catalog of available plans. Cannot delete a plan that has
+// existing subscriptions (Restrict enforced on Subscription side).
+// ============================================================
+
+model SubscriptionPlan {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  price        Decimal
+  durationDays Int
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+// ============================================================
+// SUBSCRIPTION
+// Financial record — both User and SubscriptionPlan deletions
+// are Restricted to preserve subscription history.
+// ============================================================
+
+model Subscription {
+  id        String             @id @default(uuid())
+  userId    String
+  planId    String
+  status    SubscriptionStatus @default(PENDING)
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  payments Payment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+}
+
+// ============================================================
+// DIET PLAN
+// Created by a User (trainer or admin). User deletion is Restricted
+// to preserve plans that may be referenced by clients.
+// ============================================================
+
+model DietPlan {
+  id          String   @id @default(uuid())
+  creatorId   String
+  title       String
+  goal        DietGoal
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator       User           @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  dietPlanItems DietPlanItem[]
+
+  @@index([goal])
+  @@index([isActive])
+}
+
+// ============================================================
+// DIET PLAN ITEM
+// Child records of DietPlan. Cascade delete is appropriate —
+// items have no meaning outside their parent plan.
+// mealType uses plain strings (e.g. Breakfast, Lunch, Snack, Dinner)
+// to avoid unnecessary enum churn as meal categories evolve.
+// ============================================================
+
+model DietPlanItem {
+  id           String  @id @default(uuid())
+  dietPlanId   String
+  mealType     String
+  mealName     String
+  description  String?
+  quantity     String?
+  displayOrder Int
+
+  dietPlan DietPlan @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// PAYMENT
+// Audit-critical financial record. Both User and Subscription
+// deletions are Restricted. provider field prepared for Razorpay.
+// ============================================================
+
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  subscriptionId    String
+  provider          String
+  providerPaymentId String?
+  amount            Decimal
+  currency          String
+  status            PaymentStatus
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+}
