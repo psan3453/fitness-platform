@@ -8,6 +8,7 @@ import adminRoutes from './modules/admin/admin.routes';
 import { adminSubscriptionPlanRoutes, userSubscriptionPlanRoutes, userSubscriptionRoutes } from './modules/subscriptions/subscription.routes';
 import { trainerClassRoutes, userClassRoutes } from './modules/live-classes/live-class.routes';
 import { bookingActionRoutes, bookingRoutes } from './modules/bookings/booking.routes';
+import { dietPlanCreatorRoutes, dietPlanPublicRoutes } from './modules/diet-plans/diet-plan.routes';
 
 dotenv.config();
 
@@ -28,6 +29,8 @@ app.use('/api/trainer/classes', trainerClassRoutes);
 app.use('/api/classes', userClassRoutes);
 app.use('/api/classes', bookingActionRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/diet-plans', dietPlanCreatorRoutes);
+app.use('/api/diet-plans', dietPlanPublicRoutes);
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Fitness Platform API is running' });
