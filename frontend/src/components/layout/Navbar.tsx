@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { logoutAction } from '@/lib/auth/actions';
+import { SafeUser } from '@/lib/auth/types';
 
-export default function Navbar() {
+export default function Navbar({ user }: { user: SafeUser | null }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -26,12 +28,30 @@ export default function Navbar() {
           </nav>
 
           <div className="flex items-center space-x-4">
-            <Link href="/login" className="hidden md:inline-block text-sm font-medium text-gray-700 hover:text-gray-900">
-              Login
-            </Link>
-            <Link href="/register" className="hidden md:inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors">
-              Get Started
-            </Link>
+            {user ? (
+              <div className="hidden md:flex items-center space-x-4">
+                <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Dashboard
+                </Link>
+                <Link href="/profile" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Profile
+                </Link>
+                <form action={logoutAction}>
+                  <button type="submit" className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors">
+                    Logout
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center space-x-4">
+                <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Login
+                </Link>
+                <Link href="/register" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors">
+                  Get Started
+                </Link>
+              </div>
+            )}
 
             {/* Mobile menu button */}
             <button
@@ -65,12 +85,30 @@ export default function Navbar() {
             <li><Link href="/trainers" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Become a Trainer</Link></li>
           </ul>
           <div className="border-t border-gray-200 px-4 py-4 flex flex-col space-y-3">
-            <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors">
-              Login
-            </Link>
-            <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 transition-colors">
-              Get Started
-            </Link>
+            {user ? (
+              <>
+                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                  Dashboard
+                </Link>
+                <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                  Profile
+                </Link>
+                <form action={logoutAction} className="block">
+                  <button type="submit" className="w-full text-center rounded-md bg-gray-100 px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-200 transition-colors">
+                    Logout
+                  </button>
+                </form>
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                  Login
+                </Link>
+                <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 transition-colors">
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       )}

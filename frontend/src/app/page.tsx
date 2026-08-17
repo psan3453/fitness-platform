@@ -1,12 +1,8 @@
 import Link from "next/link";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 
 export default function Home() {
   return (
-    <>
-      <Navbar />
-      <main className="flex-1 flex flex-col min-h-screen">
+    <main className="flex-1 flex flex-col min-h-screen">
         {/* Hero Section */}
         <section className="relative bg-white py-20 sm:py-32 overflow-hidden flex-1 flex flex-col justify-center border-b border-gray-100">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10 text-center">
@@ -145,7 +141,5 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <Footer />
-    </>
   );
 }
