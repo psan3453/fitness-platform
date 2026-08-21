@@ -36,3 +36,22 @@ export interface ClassBookingResponse {
     liveClassId: string;
   };
 }
+
+export interface TrainerClass {
+  id: string;
+  trainerId: string;
+  title: string;
+  description: string | null;
+  category: LiveClassCategory;
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  meetingUrl: string | null;
+  status: LiveClassStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrainerClassesResponse {
+  classes: TrainerClass[];
+}

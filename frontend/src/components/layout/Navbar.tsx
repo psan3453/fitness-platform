@@ -30,6 +30,11 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="hidden md:flex items-center space-x-4">
+                {user.role === 'TRAINER' && (
+                  <Link href="/trainer/dashboard" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                    Trainer Hub
+                  </Link>
+                )}
                 <Link href="/dashboard" className="text-sm font-medium text-gray-700 hover:text-gray-900">
                   Dashboard
                 </Link>
@@ -87,6 +92,11 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
           <div className="border-t border-gray-200 px-4 py-4 flex flex-col space-y-3">
             {user ? (
               <>
+                {user.role === 'TRAINER' && (
+                  <Link href="/trainer/dashboard" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md px-3 py-2 text-base font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">
+                    Trainer Hub
+                  </Link>
+                )}
                 <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)} className="block text-center rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 transition-colors">
                   Dashboard
                 </Link>
