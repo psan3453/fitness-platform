@@ -27,7 +27,7 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
               {user?.role === 'ADMIN' && (
                   <li>
                       <Link
-                        href="/admin/trainer-applications"
+                        href="/admin"
                         className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
                       >
                         Admin

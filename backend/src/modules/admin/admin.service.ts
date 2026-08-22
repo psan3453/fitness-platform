@@ -1,5 +1,5 @@
 import { prisma } from '../../prisma';
-import { RejectApplicationRequestDto, AdminTrainerApplicationResponseDto } from './admin.types';
+import { RejectApplicationRequestDto, AdminTrainerApplicationResponseDto, AdminUserResponseDto } from './admin.types';
 import { UserRole } from '../../generated/prisma/enums';
 
 export const adminService = {
@@ -146,5 +146,73 @@ export const adminService = {
 
       return { application: updatedApplication };
     });
+  },
+
+  getUsers: async (): Promise<AdminUserResponseDto[]> => {
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        profile: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+    return users.map(user => ({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      profile: user.profile,
+    }));
+  },
+
+  toggleUserActive: async (userId: string, isActive: boolean) => {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      const error = new Error('User not found.') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    if (user.role === UserRole.ADMIN) {
+      const error = new Error('Cannot change the status of an admin user.') as Error & { status: number };
+      error.status = 403;
+      throw error;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        profile: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    return { user: updatedUser };
   },
 };

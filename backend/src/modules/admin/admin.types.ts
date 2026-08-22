@@ -25,3 +25,16 @@ export interface AdminTrainerApplicationResponseDto {
     } | null;
   };
 }
+
+export interface AdminUserResponseDto {
+  id: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  profile: {
+    firstName: string;
+    lastName: string | null;
+  } | null;
+}

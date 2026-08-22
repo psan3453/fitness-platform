@@ -26,4 +26,18 @@ router.patch(
   adminController.rejectTrainerApplication
 );
 
+router.get(
+  '/users',
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  adminController.getUsers
+);
+
+router.patch(
+  '/users/:id/active',
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  adminController.toggleUserActive
+);
+
 export default router;

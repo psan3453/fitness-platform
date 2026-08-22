@@ -58,4 +58,41 @@ export const adminController = {
       res.status(500).json({ message: 'Internal server error' });
     }
   },
+
+  getUsers: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const users = await adminService.getUsers();
+      res.status(200).json({ users });
+    } catch (error: unknown) {
+      console.error('[adminController.getUsers]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  toggleUserActive: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = req.params.id as string;
+      const { isActive } = req.body;
+
+      if (typeof isActive !== 'boolean') {
+        res.status(400).json({ message: 'isActive must be a boolean' });
+        return;
+      }
+
+      const result = await adminService.toggleUserActive(id, isActive);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status === 404) {
+        res.status(404).json({ message: err.message });
+        return;
+      }
+      if (err.status === 403 || err.status === 400) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[adminController.toggleUserActive]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
 };

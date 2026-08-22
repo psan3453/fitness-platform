@@ -25,3 +25,20 @@ export interface AdminTrainerApplication {
 export interface AdminTrainerApplicationsResponse {
   applications: AdminTrainerApplication[];
 }
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  profile: {
+    firstName: string;
+    lastName: string | null;
+  } | null;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+}
