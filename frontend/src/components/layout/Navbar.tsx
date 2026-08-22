@@ -24,6 +24,16 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
               <li><Link href="/classes" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Classes</Link></li>
               <li><Link href="/diet-plans" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Diet Plans</Link></li>
               <li><Link href="/trainers" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Become a Trainer</Link></li>
+              {user?.role === 'ADMIN' && (
+                  <li>
+                      <Link
+                        href="/admin/trainer-applications"
+                        className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+                      >
+                        Admin
+                      </Link>
+                    </li>
+                  )}
             </ul>
           </nav>
 
