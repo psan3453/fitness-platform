@@ -41,3 +41,20 @@ userClassRoutes.get(
   requireAuth,
   liveClassController.getClassDetails
 );
+
+// Admin routes: /api/admin/classes
+export const adminClassRoutes = Router();
+
+adminClassRoutes.get(
+  '/',
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  liveClassController.getAdminClasses
+);
+
+adminClassRoutes.patch(
+  '/:id/status',
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  liveClassController.updateClassStatus
+);

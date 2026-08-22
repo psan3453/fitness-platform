@@ -27,3 +27,16 @@ export interface LiveClassWithTrainerDto extends LiveClassResponseDto {
     profileImageUrl: string | null;
   };
 }
+
+export interface AdminLiveClassDto extends LiveClassResponseDto {
+  trainer: {
+    id: string;
+    user: {
+      email: string;
+      profile: {
+        firstName: string;
+        lastName: string | null;
+      } | null;
+    };
+  };
+}

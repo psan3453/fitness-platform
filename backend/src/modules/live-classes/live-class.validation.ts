@@ -1,7 +1,10 @@
 import { z } from 'zod';
-import { LiveClassCategory } from '../../generated/prisma/enums';
+import { LiveClassCategory, LiveClassStatus } from '../../generated/prisma/enums';
 
 export const liveClassValidation = {
+  updateClassStatusSchema: z.object({
+    status: z.nativeEnum(LiveClassStatus, { message: 'Invalid status' }),
+  }).strict(),
   createClassSchema: z.object({
     title: z.string().trim().min(1, 'Title is required').max(200, 'Title is too long'),
     description: z.string().trim().nullable().optional(),

@@ -23,6 +23,22 @@ export interface LiveClass {
   trainer: LiveClassTrainer;
 }
 
+export interface AdminLiveClass extends LiveClass {
+  trainer: LiveClassTrainer & {
+    user: {
+      email: string;
+      profile: {
+        firstName: string;
+        lastName: string | null;
+      } | null;
+    };
+  };
+}
+
+export interface AdminLiveClassesResponse {
+  classes: AdminLiveClass[];
+}
+
 export interface LiveClassesResponse {
   classes: LiveClass[];
 }

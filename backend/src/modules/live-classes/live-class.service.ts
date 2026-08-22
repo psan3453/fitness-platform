@@ -1,6 +1,6 @@
 import { prisma } from '../../prisma';
-import { CreateLiveClassRequestDto, UpdateLiveClassRequestDto, LiveClassResponseDto, LiveClassWithTrainerDto } from './live-class.types';
-import { LiveClassCategory } from '../../generated/prisma/enums';
+import { CreateLiveClassRequestDto, UpdateLiveClassRequestDto, LiveClassResponseDto, LiveClassWithTrainerDto, AdminLiveClassDto } from './live-class.types';
+import { LiveClassCategory, LiveClassStatus } from '../../generated/prisma/enums';
 
 // Helper to resolve Trainer.id from JWT userId
 async function resolveTrainer(userId: string) {
@@ -136,5 +136,53 @@ export const liveClassService = {
     });
 
     return liveClass;
+  },
+
+  // Admin: get all classes
+  getAdminClasses: async (): Promise<AdminLiveClassDto[]> => {
+    const classes = await prisma.liveClass.findMany({
+      orderBy: { startTime: 'desc' },
+      include: {
+        trainer: {
+          select: {
+            id: true,
+            user: {
+              select: {
+                email: true,
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return classes;
+  },
+
+  // Admin: update class status
+  updateClassStatus: async (classId: string, status: string): Promise<LiveClassResponseDto> => {
+    const existing = await prisma.liveClass.findUnique({
+      where: { id: classId },
+    });
+
+    if (!existing) {
+      const error = new Error('Class not found.') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    // Cancel logic
+    const updated = await prisma.liveClass.update({
+      where: { id: classId },
+      data: { status: status as LiveClassStatus },
+    });
+
+    return updated;
   },
 };

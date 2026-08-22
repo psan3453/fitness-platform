@@ -24,8 +24,8 @@ const adminSections = [
   {
     title: 'Live Class Management',
     description: 'Manage live Yoga, Zumba, and HIIT classes.',
-    href: '#',
-    available: false,
+    href: '/admin/classes',
+    available: true,
   },
   {
     title: 'Subscription Management',

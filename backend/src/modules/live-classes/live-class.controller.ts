@@ -112,4 +112,37 @@ export const liveClassController = {
       res.status(500).json({ message: 'Internal server error' });
     }
   },
+
+  // Admin: get all classes
+  getAdminClasses: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const classes = await liveClassService.getAdminClasses();
+      res.status(200).json({ classes });
+    } catch (error: unknown) {
+      console.error('[liveClassController.getAdminClasses]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  // Admin: update class status
+  updateClassStatus: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const classId = req.params.id as string;
+      const validatedData = liveClassValidation.updateClassStatusSchema.parse(req.body);
+      const updated = await liveClassService.updateClassStatus(classId, validatedData.status);
+      res.status(200).json({ class: updated });
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: 'Validation failed', errors: error.issues });
+        return;
+      }
+      const err = error as Error & { status?: number };
+      if (err.status === 404) {
+        res.status(404).json({ message: err.message });
+        return;
+      }
+      console.error('[liveClassController.updateClassStatus]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
 };
