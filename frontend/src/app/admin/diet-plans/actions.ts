@@ -1,0 +1,63 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { fetchApi, ApiError } from '@/lib/api/fetcher';
+import { DietGoal } from '@/lib/types/diet-plan';
+
+export async function createDietPlanAction(data: {
+  title: string;
+  goal: DietGoal;
+  description?: string;
+  items: {
+    mealType: string;
+    mealName: string;
+    description?: string;
+    quantity?: string;
+    displayOrder: number;
+  }[];
+}) {
+  try {
+    await fetchApi('/api/diet-plans', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    revalidatePath('/admin/diet-plans');
+    return { success: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: 'An unexpected error occurred.' };
+  }
+}
+
+export async function updateDietPlanAction(
+  id: string,
+  data: {
+    title?: string;
+    goal?: DietGoal;
+    description?: string | null;
+    isActive?: boolean;
+    items?: {
+      mealType: string;
+      mealName: string;
+      description?: string | null;
+      quantity?: string | null;
+      displayOrder: number;
+    }[];
+  }
+) {
+  try {
+    await fetchApi(`/api/diet-plans/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    revalidatePath('/admin/diet-plans');
+    return { success: true };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: 'An unexpected error occurred.' };
+  }
+}

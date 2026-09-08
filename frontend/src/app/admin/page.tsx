@@ -35,9 +35,9 @@ const adminSections = [
   },
   {
     title: 'Diet Plan Management',
-    description: 'Manage structured diet plans and meals.',
-    href: '#',
-    available: false,
+    description: 'Manage diet plans for users.',
+    href: '/admin/diet-plans',
+    available: true,
   },
 ];
 
