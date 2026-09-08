@@ -1,5 +1,5 @@
 import { prisma } from '../../prisma';
-import { CreatePlanRequestDto, UpdatePlanRequestDto, SubscriptionPlanResponseDto, UserSubscriptionResponseDto } from './subscription.types';
+import { CreatePlanRequestDto, UpdatePlanRequestDto, SubscriptionPlanResponseDto, UserSubscriptionResponseDto, AdminSubscriptionResponseDto } from './subscription.types';
 
 export const subscriptionService = {
   // Admin Plan Management
@@ -100,6 +100,52 @@ export const subscriptionService = {
         price: Number(sub.plan.price),
         durationDays: sub.plan.durationDays,
       }
+    }));
+  },
+
+  // Admin Subscription Visibility
+  getAllSubscriptions: async (): Promise<AdminSubscriptionResponseDto[]> => {
+    const subscriptions = await prisma.subscription.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            durationDays: true,
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            profile: {
+              select: {
+                firstName: true,
+                lastName: true,
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return subscriptions.map(sub => ({
+      id: sub.id,
+      planId: sub.planId,
+      status: sub.status,
+      startDate: sub.startDate,
+      endDate: sub.endDate,
+      createdAt: sub.createdAt,
+      updatedAt: sub.updatedAt,
+      plan: {
+        id: sub.plan.id,
+        name: sub.plan.name,
+        price: Number(sub.plan.price),
+        durationDays: sub.plan.durationDays,
+      },
+      user: sub.user
     }));
   },
 };

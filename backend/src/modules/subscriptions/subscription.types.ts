@@ -31,3 +31,14 @@ export interface UserSubscriptionResponseDto {
     durationDays: number;
   };
 }
+
+export interface AdminSubscriptionResponseDto extends UserSubscriptionResponseDto {
+  user: {
+    id: string;
+    email: string;
+    profile: {
+      firstName: string;
+      lastName: string | null;
+    } | null;
+  };
+}

@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../auth/auth.middleware';
 import { UserRole } from '../../generated/prisma/enums';
 
 export const adminSubscriptionPlanRoutes = Router();
+export const adminSubscriptionRoutes = Router();
 export const userSubscriptionPlanRoutes = Router();
 export const userSubscriptionRoutes = Router();
 
@@ -41,4 +42,12 @@ userSubscriptionRoutes.get(
   '/me',
   requireAuth,
   subscriptionController.getUserSubscriptions
+);
+
+// ADMIN: /api/admin/subscriptions
+adminSubscriptionRoutes.get(
+  '/',
+  requireAuth,
+  requireRole(UserRole.ADMIN),
+  subscriptionController.getAllSubscriptions
 );

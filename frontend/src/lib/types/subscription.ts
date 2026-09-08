@@ -18,3 +18,20 @@ export interface SubscriptionPlanDetail {
 export interface SubscriptionPlansResponse {
   plans: SubscriptionPlanDetail[];
 }
+
+import { UserSubscription } from './dashboard';
+
+export interface AdminSubscription extends UserSubscription {
+  user: {
+    id: string;
+    email: string;
+    profile: {
+      firstName: string;
+      lastName: string | null;
+    } | null;
+  };
+}
+
+export interface AdminSubscriptionsResponse {
+  subscriptions: AdminSubscription[];
+}

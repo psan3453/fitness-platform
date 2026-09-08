@@ -74,4 +74,14 @@ export const subscriptionController = {
       res.status(500).json({ message: 'Internal server error' });
     }
   },
+
+  getAllSubscriptions: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const subscriptions = await subscriptionService.getAllSubscriptions();
+      res.status(200).json({ subscriptions });
+    } catch (error: unknown) {
+      console.error('[subscriptionController.getAllSubscriptions]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
 };

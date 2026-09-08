@@ -30,8 +30,8 @@ const adminSections = [
   {
     title: 'Subscription Management',
     description: 'Manage subscription plans and subscriptions.',
-    href: '#',
-    available: false,
+    href: '/admin/subscriptions',
+    available: true,
   },
   {
     title: 'Diet Plan Management',
