@@ -61,4 +61,26 @@ export const bookingController = {
       res.status(500).json({ message: 'Internal server error' });
     }
   },
+
+  joinClass: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const bookingId = req.params.id as string;
+      const result = await bookingService.joinClass(userId, bookingId);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[bookingController.joinClass]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
 };

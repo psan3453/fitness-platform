@@ -63,7 +63,7 @@ export default async function TrainersPage() {
                 <div>
                   <dt className="text-gray-500 mb-1">Submitted On</dt>
                   <dd className="font-medium text-gray-900">
-                    {new Date(activeApplication.createdAt).toLocaleDateString()}
+                    {new Date(activeApplication.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                   </dd>
                 </div>
                 <div className="sm:col-span-2">

@@ -25,3 +25,10 @@ bookingRoutes.patch(
   requireAuth,
   bookingController.cancelBooking
 );
+
+// /api/bookings/:id/join
+bookingRoutes.get(
+  '/:id/join',
+  requireAuth,
+  bookingController.joinClass
+);

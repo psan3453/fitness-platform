@@ -18,3 +18,15 @@ export async function bookClassAction(classId: string) {
     return { success: false, error: 'An unexpected error occurred while booking.' };
   }
 }
+
+export async function joinClassAction(bookingId: string) {
+  try {
+    const data = await fetchApi<{ meetingUrl: string }>(`/api/bookings/${bookingId}/join`);
+    return { success: true, meetingUrl: data.meetingUrl };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: 'An unexpected error occurred while joining.' };
+  }
+}

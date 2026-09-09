@@ -20,7 +20,7 @@ export interface LiveClassResponseDto {
   updatedAt: Date;
 }
 
-export interface LiveClassWithTrainerDto extends LiveClassResponseDto {
+export interface LiveClassWithTrainerDto extends Omit<LiveClassResponseDto, 'meetingUrl'> {
   trainer: {
     id: string;
     specialization: string;

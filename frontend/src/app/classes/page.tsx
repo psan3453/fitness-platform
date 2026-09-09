@@ -55,6 +55,11 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
       .map((b) => b.liveClassId)
   );
 
+  const classBookingMap = new Map<string, string>();
+  bookings
+    .filter((b) => b.status === 'BOOKED')
+    .forEach((b) => classBookingMap.set(b.liveClassId, b.id));
+
   const categories = [
     { name: 'All', value: undefined },
     { name: 'Yoga', value: 'YOGA' },
@@ -105,6 +110,7 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
                   key={liveClass.id}
                   liveClass={liveClass}
                   isBooked={bookedClassIds.has(liveClass.id)}
+                  bookingId={classBookingMap.get(liveClass.id)}
                 />
               ))}
             </div>

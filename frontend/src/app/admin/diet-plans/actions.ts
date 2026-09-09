@@ -7,12 +7,12 @@ import { DietGoal } from '@/lib/types/diet-plan';
 export async function createDietPlanAction(data: {
   title: string;
   goal: DietGoal;
-  description?: string;
+  description?: string | null;
   items: {
     mealType: string;
     mealName: string;
-    description?: string;
-    quantity?: string;
+    description?: string | null;
+    quantity?: string | null;
     displayOrder: number;
   }[];
 }) {

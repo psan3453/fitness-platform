@@ -16,7 +16,6 @@ export interface LiveClass {
   startTime: string;
   endTime: string;
   capacity: number;
-  meetingUrl: string | null;
   status: LiveClassStatus;
   createdAt: string;
   updatedAt: string;
@@ -24,6 +23,7 @@ export interface LiveClass {
 }
 
 export interface AdminLiveClass extends LiveClass {
+  meetingUrl: string | null;
   trainer: LiveClassTrainer & {
     user: {
       email: string;

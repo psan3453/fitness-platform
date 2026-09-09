@@ -18,7 +18,6 @@ export interface MyBookingsResponseDto {
       startTime: Date;
       endTime: Date;
       capacity: number;
-      meetingUrl: string | null;
       status: LiveClassStatus;
     };
   }>;

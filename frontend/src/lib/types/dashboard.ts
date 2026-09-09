@@ -42,7 +42,6 @@ export interface BookingLiveClass {
   startTime: string;
   endTime: string;
   capacity: number;
-  meetingUrl: string | null;
   status: LiveClassStatus;
 }
 

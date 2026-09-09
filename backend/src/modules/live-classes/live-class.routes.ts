@@ -20,6 +20,13 @@ trainerClassRoutes.get(
   liveClassController.getTrainerClasses
 );
 
+trainerClassRoutes.get(
+  '/:id',
+  requireAuth,
+  requireRole(UserRole.TRAINER),
+  liveClassController.getTrainerClassById
+);
+
 trainerClassRoutes.patch(
   '/:id',
   requireAuth,

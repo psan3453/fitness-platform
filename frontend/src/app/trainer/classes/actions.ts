@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { fetchApi, ApiError } from '@/lib/api/fetcher';
-import { LiveClass, LiveClassCategory } from '@/lib/types/classes';
+import { TrainerClass, LiveClassCategory } from '@/lib/types/classes';
 
 export interface CreateTrainerClassData {
   title: string;
@@ -26,7 +26,7 @@ export interface UpdateTrainerClassData {
 
 export async function createTrainerClassAction(data: CreateTrainerClassData) {
   try {
-    const response = await fetchApi<{ class: LiveClass }>('/api/trainer/classes', {
+    const response = await fetchApi<{ class: TrainerClass }>('/api/trainer/classes', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -43,7 +43,7 @@ export async function createTrainerClassAction(data: CreateTrainerClassData) {
 
 export async function updateTrainerClassAction(id: string, data: UpdateTrainerClassData) {
   try {
-    const response = await fetchApi<{ class: LiveClass }>(`/api/trainer/classes/${id}`, {
+    const response = await fetchApi<{ class: TrainerClass }>(`/api/trainer/classes/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
@@ -61,7 +61,7 @@ export async function updateTrainerClassAction(id: string, data: UpdateTrainerCl
 
 export async function getTrainerClassAction(id: string) {
   try {
-    const response = await fetchApi<{ class: LiveClass }>(`/api/classes/${id}`, {
+    const response = await fetchApi<{ class: TrainerClass }>(`/api/trainer/classes/${id}`, {
       method: 'GET',
     });
     return { success: true, class: response.class };

@@ -8,6 +8,20 @@ export const bookingService = {
     try {
       const result = await prisma.$transaction(
         async (tx) => {
+          // 0. Verify active subscription
+          const activeSubscription = await tx.subscription.findFirst({
+            where: {
+              userId,
+              status: 'ACTIVE',
+            },
+          });
+
+          if (!activeSubscription) {
+            const error = new Error('An active subscription is required to book a class.') as Error & { status: number };
+            error.status = 403;
+            throw error;
+          }
+
           // 1. Read the LiveClass
           const liveClass = await tx.liveClass.findUnique({
             where: { id: classId },
@@ -134,7 +148,6 @@ export const bookingService = {
             startTime: true,
             endTime: true,
             capacity: true,
-            meetingUrl: true,
             status: true,
           },
         },
@@ -194,5 +207,57 @@ export const bookingService = {
       cancelledAt: cancelledBooking.cancelledAt,
       liveClassId: cancelledBooking.liveClassId,
     };
+  },
+
+  joinClass: async (userId: string, bookingId: string): Promise<{ meetingUrl: string }> => {
+    const booking = await prisma.classBooking.findUnique({
+      where: { id: bookingId },
+      include: { liveClass: true },
+    });
+
+    if (!booking || booking.userId !== userId) {
+      const error = new Error('Booking not found.') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    if (booking.status !== BookingStatus.BOOKED) {
+      const error = new Error('Booking is not active.') as Error & { status: number };
+      error.status = 409;
+      throw error;
+    }
+
+    const { liveClass } = booking;
+
+    if (liveClass.status === LiveClassStatus.CANCELLED) {
+      const error = new Error('This class has been cancelled.') as Error & { status: number };
+      error.status = 409;
+      throw error;
+    }
+
+    const now = new Date();
+    const startTime = new Date(liveClass.startTime);
+    const endTime = new Date(liveClass.endTime);
+    const joinStartTime = new Date(startTime.getTime() - 15 * 60000);
+
+    if (now < joinStartTime) {
+      const error = new Error('The class has not started yet. You can join up to 15 minutes before the start time.') as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (now > endTime) {
+      const error = new Error('The class has already ended.') as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (!liveClass.meetingUrl) {
+      const error = new Error('Meeting URL is not available for this class.') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    return { meetingUrl: liveClass.meetingUrl };
   },
 };

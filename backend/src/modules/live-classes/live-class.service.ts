@@ -53,6 +53,22 @@ export const liveClassService = {
     return classes;
   },
 
+  getTrainerClassById: async (userId: string, classId: string): Promise<LiveClassResponseDto> => {
+    const trainer = await resolveTrainer(userId);
+
+    const liveClass = await prisma.liveClass.findFirst({
+      where: { id: classId, trainerId: trainer.id },
+    });
+
+    if (!liveClass) {
+      const error = new Error('Class not found.') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    return liveClass;
+  },
+
   updateClass: async (userId: string, classId: string, data: UpdateLiveClassRequestDto): Promise<LiveClassResponseDto> => {
     const trainer = await resolveTrainer(userId);
 
@@ -114,7 +130,10 @@ export const liveClassService = {
       },
     });
 
-    return classes;
+    return classes.map(c => {
+      const { meetingUrl, ...rest } = c;
+      return rest;
+    });
   },
 
   // User: get class details
@@ -135,7 +154,10 @@ export const liveClassService = {
       },
     });
 
-    return liveClass;
+    if (!liveClass) return null;
+
+    const { meetingUrl, ...rest } = liveClass;
+    return rest;
   },
 
   // Admin: get all classes

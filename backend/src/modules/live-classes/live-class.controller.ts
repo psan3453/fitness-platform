@@ -52,6 +52,28 @@ export const liveClassController = {
     }
   },
 
+  // Trainer: get own class details
+  getTrainerClassById: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+      const classId = req.params.id as string;
+      const liveClass = await liveClassService.getTrainerClassById(userId, classId);
+      res.status(200).json({ class: liveClass });
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[liveClassController.getTrainerClassById]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
   // Trainer: update own class
   updateClass: async (req: Request, res: Response): Promise<void> => {
     try {

@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { LiveClass } from '@/lib/types/classes';
-import { bookClassAction } from '../actions';
+import { bookClassAction, joinClassAction } from '../actions';
 
 interface ClassCardProps {
   liveClass: LiveClass;
   isBooked: boolean;
+  bookingId?: string;
 }
 
 const categoryColors: Record<string, { bg: string; text: string; accent: string }> = {
@@ -18,12 +19,14 @@ const categoryColors: Record<string, { bg: string; text: string; accent: string 
 function formatDateTime(iso: string): { date: string; time: string } {
   const d = new Date(iso);
   const date = d.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     weekday: 'short',
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
   const time = d.toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
@@ -31,9 +34,11 @@ function formatDateTime(iso: string): { date: string; time: string } {
   return { date, time };
 }
 
-export default function ClassCard({ liveClass, isBooked: initialIsBooked }: ClassCardProps) {
+export default function ClassCard({ liveClass, isBooked: initialIsBooked, bookingId: initialBookingId }: ClassCardProps) {
   const [isBooked, setIsBooked] = useState(initialIsBooked);
+  const [bookingId, setBookingId] = useState<string | undefined>(initialBookingId);
   const [isBooking, setIsBooking] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const colors = categoryColors[liveClass.category] ?? {
@@ -55,11 +60,30 @@ export default function ClassCard({ liveClass, isBooked: initialIsBooked }: Clas
 
     if (result.success) {
       setIsBooked(true);
+      if (result.booking?.id) {
+        setBookingId(result.booking.id);
+      }
     } else {
       setError(result.error || 'Failed to book class.');
     }
 
     setIsBooking(false);
+  };
+
+  const handleJoin = async () => {
+    if (!bookingId) return;
+    setIsJoining(true);
+    setError(null);
+
+    const result = await joinClassAction(bookingId);
+
+    if (result.success && result.meetingUrl) {
+      window.open(result.meetingUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      setError(result.error || 'Failed to join class.');
+    }
+
+    setIsJoining(false);
   };
 
   return (
@@ -114,15 +138,44 @@ export default function ClassCard({ liveClass, isBooked: initialIsBooked }: Clas
           </div>
         )}
         {isBooked ? (
-          <button
-            disabled
-            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-green-700 bg-green-100 cursor-not-allowed"
-          >
-          <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
-            Booked
-          </button>
+          bookingId ? (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1 flex justify-center items-center py-2.5 px-3 border border-transparent rounded-md text-sm font-medium text-green-700 bg-green-100">
+                <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Booked
+              </div>
+              <button
+                type="button"
+                onClick={handleJoin}
+                disabled={isJoining}
+                className="flex-1 flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
+              >
+                {isJoining ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Joining...
+                  </span>
+                ) : (
+                  'Join Class'
+                )}
+              </button>
+            </div>
+          ) : (
+            <button
+              disabled
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-green-700 bg-green-100 cursor-not-allowed"
+            >
+              <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+              Booked
+            </button>
+          )
         ) : (
           <button
             onClick={handleBook}

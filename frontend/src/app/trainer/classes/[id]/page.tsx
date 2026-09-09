@@ -4,12 +4,12 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getTrainerClassAction, updateTrainerClassAction } from '../actions';
-import { LiveClass, LiveClassCategory } from '@/lib/types/classes';
+import { TrainerClass, LiveClassCategory } from '@/lib/types/classes';
 
 export default function TrainerClassEditPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  const [liveClass, setLiveClass] = useState<LiveClass | null>(null);
+  const [liveClass, setLiveClass] = useState<TrainerClass | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
