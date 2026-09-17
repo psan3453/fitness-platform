@@ -10,3 +10,10 @@ paymentRoutes.post(
   requireAuth,
   paymentController.createOrder
 );
+
+// POST /api/payments/verify
+paymentRoutes.post(
+  '/verify',
+  requireAuth,
+  paymentController.verifyPayment
+);

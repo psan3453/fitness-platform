@@ -4,6 +4,7 @@ import { getAuthUser } from '@/lib/auth/session';
 import { fetchApi, ApiError } from '@/lib/api/fetcher';
 import { UserSubscriptionsResponse, UserSubscription } from '@/lib/types/dashboard';
 import { SubscriptionPlansResponse, SubscriptionPlanDetail } from '@/lib/types/subscription';
+import PlanSubscribeButton from './PlanSubscribeButton';
 
 // ── Data Fetching ────────────────────────────────────────────
 
@@ -200,13 +201,19 @@ export default async function SubscriptionsPage() {
                         >
                           Go to Dashboard
                         </Link>
-                      ) : (
+                      ) : currentSub?.status === 'ACTIVE' ? (
                         <button
                           disabled
-                          className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-medium text-gray-500 bg-gray-200 cursor-not-allowed"
+                          className="w-full flex justify-center py-2.5 px-4 rounded-lg text-sm font-medium text-gray-400 bg-gray-100 cursor-not-allowed border border-gray-200"
                         >
-                          Coming Soon
+                          Already Subscribed
                         </button>
+                      ) : (
+                        <PlanSubscribeButton
+                          planId={plan.id}
+                          planName={plan.name}
+                          userEmail={user.email}
+                        />
                       )}
                     </div>
                   </div>

@@ -10,3 +10,12 @@ export interface CreateOrderResponseDto {
   keyId: string;
   subscriptionId: string;
 }
+
+export type VerifyPaymentRequestDto = z.infer<typeof paymentValidation.verifyPaymentSchema>;
+
+export interface VerifyPaymentResponseDto {
+  success: boolean;
+  subscriptionId: string;
+  status: 'ACTIVE';
+  alreadyProcessed?: boolean;
+}

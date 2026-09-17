@@ -33,4 +33,34 @@ export const paymentController = {
       res.status(500).json({ message: 'Failed to create payment order.' });
     }
   },
+
+  verifyPayment: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const validatedData = paymentValidation.verifyPaymentSchema.parse(req.body);
+      const result = await paymentService.verifyPayment(userId, validatedData);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: 'Validation failed', errors: error.issues });
+        return;
+      }
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      if (err.status && err.status >= 500 && err.status < 600) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[paymentController.verifyPayment]', error instanceof Error ? error.message : 'Unknown error');
+      res.status(500).json({ message: 'Failed to verify payment.' });
+    }
+  },
 };
