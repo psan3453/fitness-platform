@@ -333,6 +333,7 @@ model Payment {
   userId            String
   subscriptionId    String
   provider          String
+  providerOrderId   String?       @unique
   providerPaymentId String?
   amount            Decimal
   currency          String
