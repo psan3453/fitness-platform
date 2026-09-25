@@ -5,6 +5,13 @@ import { SubscriptionStatus } from '../../generated/prisma/enums';
 export type CreatePlanRequestDto = z.infer<typeof subscriptionValidation.createPlanSchema>;
 export type UpdatePlanRequestDto = z.infer<typeof subscriptionValidation.updatePlanSchema>;
 
+export interface TrainerSummaryDto {
+  id: string;
+  name: string;
+  specialization: string;
+  profileImageUrl: string | null;
+}
+
 export interface SubscriptionPlanResponseDto {
   id: string;
   name: string;
@@ -12,6 +19,8 @@ export interface SubscriptionPlanResponseDto {
   price: number;
   durationDays: number;
   isActive: boolean;
+  trainerId: string | null;
+  trainer?: TrainerSummaryDto | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +38,7 @@ export interface UserSubscriptionResponseDto {
     name: string;
     price: number;
     durationDays: number;
+    trainerId?: string | null;
   };
 }
 

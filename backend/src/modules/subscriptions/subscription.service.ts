@@ -59,14 +59,65 @@ export const subscriptionService = {
   // User Plan Browsing
   getActivePlans: async (): Promise<SubscriptionPlanResponseDto[]> => {
     const plans = await prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        trainerId: { not: null },
+        trainer: {
+          isActive: true,
+        },
+      },
+      include: {
+        trainer: {
+          select: {
+            id: true,
+            specialization: true,
+            profileImageUrl: true,
+            user: {
+              select: {
+                email: true,
+                profile: {
+                  select: {
+                    firstName: true,
+                    lastName: true,
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       orderBy: { price: 'asc' },
     });
 
-    return plans.map(plan => ({
-      ...plan,
-      price: Number(plan.price),
-    }));
+    return plans.map((plan) => {
+      const profile = plan.trainer?.user?.profile;
+      const trainerName = profile
+        ? `${profile.firstName} ${profile.lastName || ''}`.trim()
+        : plan.trainer?.user?.email?.split('@')[0] || 'Trainer';
+
+      const profileImageUrl = plan.trainer?.profileImageUrl || profile?.avatarUrl || null;
+
+      return {
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: Number(plan.price),
+        durationDays: plan.durationDays,
+        isActive: plan.isActive,
+        trainerId: plan.trainerId,
+        trainer: plan.trainer
+          ? {
+              id: plan.trainer.id,
+              name: trainerName,
+              specialization: plan.trainer.specialization,
+              profileImageUrl,
+            }
+          : null,
+        createdAt: plan.createdAt,
+        updatedAt: plan.updatedAt,
+      };
+    });
   },
 
   // User Subscription Visibility
@@ -81,6 +132,7 @@ export const subscriptionService = {
             name: true,
             price: true,
             durationDays: true,
+            trainerId: true,
           }
         }
       }
@@ -99,6 +151,7 @@ export const subscriptionService = {
         name: sub.plan.name,
         price: Number(sub.plan.price),
         durationDays: sub.plan.durationDays,
+        trainerId: sub.plan.trainerId,
       }
     }));
   },

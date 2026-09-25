@@ -3,6 +3,13 @@
 // from dashboard.ts for user subscriptions.
 // This file adds the full SubscriptionPlanDetail type for GET /api/subscription-plans.
 
+export interface TrainerSummary {
+  id: string;
+  name: string;
+  specialization: string;
+  profileImageUrl: string | null;
+}
+
 export interface SubscriptionPlanDetail {
   id: string;
   name: string;
@@ -10,6 +17,8 @@ export interface SubscriptionPlanDetail {
   price: number;
   durationDays: number;
   isActive: boolean;
+  trainerId?: string | null;
+  trainer?: TrainerSummary | null;
   createdAt: string;
   updatedAt: string;
 }

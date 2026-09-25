@@ -10,6 +10,7 @@ export interface SubscriptionPlan {
   name: string;
   price: number;
   durationDays: number;
+  trainerId?: string | null;
 }
 
 export interface UserSubscription {
