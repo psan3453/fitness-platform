@@ -168,19 +168,21 @@ model TrainerApplication {
 // ============================================================
 
 model Trainer {
-  id              String   @id @default(uuid())
-  userId          String   @unique
+  id              String            @id @default(uuid())
+  userId          String            @unique
   bio             String?
-  specialization  String
+  specialization  LiveClassCategory
   experience      String?
   certifications  String?
   profileImageUrl String?
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  liveClasses LiveClass[]
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  liveClasses       LiveClass[]
+  subscriptionPlans SubscriptionPlan[]
+  dietPlans         DietPlan[]
 }
 
 // ============================================================
@@ -248,10 +250,14 @@ model SubscriptionPlan {
   price        Decimal
   durationDays Int
   isActive     Boolean  @default(true)
+  trainerId    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  trainer       Trainer?       @relation(fields: [trainerId], references: [id], onDelete: Restrict)
   subscriptions Subscription[]
+
+  @@index([trainerId])
 }
 
 // ============================================================
@@ -288,6 +294,7 @@ model Subscription {
 model DietPlan {
   id          String   @id @default(uuid())
   creatorId   String
+  trainerId   String?
   title       String
   goal        DietGoal
   description String?
@@ -296,10 +303,12 @@ model DietPlan {
   updatedAt   DateTime @updatedAt
 
   creator       User           @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  trainer       Trainer?       @relation(fields: [trainerId], references: [id], onDelete: Restrict)
   dietPlanItems DietPlanItem[]
 
   @@index([goal])
   @@index([isActive])
+  @@index([trainerId])
 }
 
 // ============================================================

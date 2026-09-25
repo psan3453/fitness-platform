@@ -1,6 +1,6 @@
 import { prisma } from '../../prisma';
 import { RejectApplicationRequestDto, AdminTrainerApplicationResponseDto, AdminUserResponseDto } from './admin.types';
-import { UserRole } from '../../generated/prisma/enums';
+import { UserRole, LiveClassCategory } from '../../generated/prisma/enums';
 
 export const adminService = {
   getTrainerApplications: async (): Promise<AdminTrainerApplicationResponseDto[]> => {
@@ -80,9 +80,19 @@ export const adminService = {
         throw error;
       }
 
+      // 6. Validate specialization against supported LiveClassCategory values
+      const normalizedSpecialization = application.specialization.trim().toUpperCase();
+      if (!Object.values(LiveClassCategory).includes(normalizedSpecialization as LiveClassCategory)) {
+        const error = new Error(
+          `Cannot approve application with unsupported specialization '${application.specialization}'. Supported specializations are: ${Object.values(LiveClassCategory).join(', ')}.`
+        ) as Error & { status: number };
+        error.status = 400;
+        throw error;
+      }
+
       const now = new Date();
 
-      // 6. Update the TrainerApplication
+      // 7. Update the TrainerApplication
       const updatedApplication = await tx.trainerApplication.update({
         where: { id: applicationId },
         data: {
@@ -91,7 +101,7 @@ export const adminService = {
         },
       });
 
-      // 7. Update User
+      // 8. Update User
       await tx.user.update({
         where: { id: application.userId },
         data: {
@@ -99,12 +109,12 @@ export const adminService = {
         },
       });
 
-      // 8. Create Trainer using application data
+      // 9. Create Trainer using application data
       const newTrainer = await tx.trainer.create({
         data: {
           userId: application.userId,
           bio: application.bio,
-          specialization: application.specialization,
+          specialization: normalizedSpecialization as LiveClassCategory,
           experience: application.experience,
           certifications: application.certifications,
           profileImageUrl: null,
@@ -112,7 +122,7 @@ export const adminService = {
         },
       });
 
-      // 9. Return safely
+      // 10. Return safely
       return { application: updatedApplication, trainer: newTrainer };
     });
   },
