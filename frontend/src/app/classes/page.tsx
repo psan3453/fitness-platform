@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth/session';
 import { fetchApi, ApiError } from '@/lib/api/fetcher';
 import { LiveClassesResponse } from '@/lib/types/classes';
-import { UserBookingsResponse } from '@/lib/types/dashboard';
+import { UserSubscriptionsResponse } from '@/lib/types/dashboard';
 import ClassCard from './components/ClassCard';
 
 interface ClassesPageProps {
@@ -23,13 +23,13 @@ async function fetchClasses(category?: string) {
   }
 }
 
-async function fetchMyBookings() {
+async function fetchSubscriptions() {
   try {
-    const data = await fetchApi<UserBookingsResponse>('/api/bookings/me');
-    return data.bookings;
+    const data = await fetchApi<UserSubscriptionsResponse>('/api/subscriptions/me');
+    return data.subscriptions;
   } catch (error) {
     if (error instanceof ApiError) {
-      console.error('[classes] bookings fetch failed:', error.status, error.message);
+      console.error('[classes] subscriptions fetch failed:', error.status, error.message);
     }
     return [];
   }
@@ -44,21 +44,17 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
 
   const resolvedSearchParams = await searchParams;
   const categoryParam = typeof resolvedSearchParams.category === 'string' ? resolvedSearchParams.category : undefined;
-  const [classes, bookings] = await Promise.all([
+  const [classes, subscriptions] = await Promise.all([
     fetchClasses(categoryParam),
-    fetchMyBookings(),
+    fetchSubscriptions(),
   ]);
 
-  const bookedClassIds = new Set(
-    bookings
-      .filter((b) => b.status === 'BOOKED' || b.status === 'ATTENDED')
-      .map((b) => b.liveClassId)
+  const now = new Date();
+  const subscribedTrainerIds = new Set(
+    subscriptions
+      .filter((s) => s.status === 'ACTIVE' && new Date(s.endDate) > now && s.plan?.trainerId)
+      .map((s) => s.plan.trainerId as string)
   );
-
-  const classBookingMap = new Map<string, string>();
-  bookings
-    .filter((b) => b.status === 'BOOKED')
-    .forEach((b) => classBookingMap.set(b.liveClassId, b.id));
 
   const categories = [
     { name: 'All', value: undefined },
@@ -76,7 +72,7 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
             Live Classes
           </h1>
           <p className="text-gray-600">
-            Browse and book upcoming live Yoga, Zumba, and HIIT sessions.
+            Browse and join live Yoga, Zumba, and HIIT sessions from your subscribed trainers.
           </p>
         </section>
 
@@ -109,8 +105,7 @@ export default async function ClassesPage({ searchParams }: ClassesPageProps) {
                 <ClassCard
                   key={liveClass.id}
                   liveClass={liveClass}
-                  isBooked={bookedClassIds.has(liveClass.id)}
-                  bookingId={classBookingMap.get(liveClass.id)}
+                  isSubscribed={subscribedTrainerIds.has(liveClass.trainerId)}
                 />
               ))}
             </div>

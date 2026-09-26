@@ -40,3 +40,11 @@ export interface AdminLiveClassDto extends LiveClassResponseDto {
     };
   };
 }
+
+export interface JoinLiveClassResponseDto {
+  meetingUrl: string;
+}
+
+export interface TrainerSpecializationResponseDto {
+  specialization: LiveClassCategory;
+}

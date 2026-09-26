@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createTrainerClassAction } from '../actions';
+import { createTrainerClassAction, getTrainerSpecializationAction } from '../actions';
 import { LiveClassCategory } from '@/lib/types/classes';
 
 export default function CreateClassPage() {
@@ -22,6 +22,16 @@ export default function CreateClassPage() {
     capacity: 20,
     meetingUrl: '',
   });
+
+  useEffect(() => {
+    async function loadSpecialization() {
+      const res = await getTrainerSpecializationAction();
+      if (res.success && res.specialization) {
+        setFormData(prev => ({ ...prev, category: res.specialization as LiveClassCategory }));
+      }
+    }
+    loadSpecialization();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -152,14 +162,15 @@ export default function CreateClassPage() {
                     id="category"
                     name="category"
                     required
+                    disabled
                     value={formData.category}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 text-gray-700 shadow-sm sm:text-sm p-2 border cursor-not-allowed"
                   >
-                    <option value="YOGA">Yoga</option>
-                    <option value="ZUMBA">Zumba</option>
-                    <option value="HIIT">HIIT</option>
+                    <option value={formData.category}>{formData.category}</option>
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Locked to your verified trainer specialization ({formData.category}).
+                  </p>
                 </div>
 
                 <div>

@@ -1,6 +1,19 @@
 import { prisma } from '../../prisma';
-import { CreateLiveClassRequestDto, UpdateLiveClassRequestDto, LiveClassResponseDto, LiveClassWithTrainerDto, AdminLiveClassDto } from './live-class.types';
-import { LiveClassCategory, LiveClassStatus } from '../../generated/prisma/enums';
+import {
+  CreateLiveClassRequestDto,
+  UpdateLiveClassRequestDto,
+  LiveClassResponseDto,
+  LiveClassWithTrainerDto,
+  AdminLiveClassDto,
+  JoinLiveClassResponseDto,
+  TrainerSpecializationResponseDto,
+} from './live-class.types';
+import {
+  LiveClassCategory,
+  LiveClassStatus,
+  BookingStatus,
+  SubscriptionStatus,
+} from '../../generated/prisma/enums';
 
 // Helper to resolve Trainer.id from JWT userId
 async function resolveTrainer(userId: string) {
@@ -24,6 +37,12 @@ async function resolveTrainer(userId: string) {
 export const liveClassService = {
   createClass: async (userId: string, data: CreateLiveClassRequestDto): Promise<LiveClassResponseDto> => {
     const trainer = await resolveTrainer(userId);
+
+    if (data.category !== trainer.specialization) {
+      const error = new Error(`Trainer specialization is ${trainer.specialization}. You cannot create a ${data.category} class.`) as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
 
     const liveClass = await prisma.liveClass.create({
       data: {
@@ -80,6 +99,12 @@ export const liveClassService = {
     if (!existing) {
       const error = new Error('Class not found.') as Error & { status: number };
       error.status = 404;
+      throw error;
+    }
+
+    if (data.category && data.category !== trainer.specialization) {
+      const error = new Error(`Trainer specialization is ${trainer.specialization}. You cannot update category to ${data.category}.`) as Error & { status: number };
+      error.status = 400;
       throw error;
     }
 
@@ -206,5 +231,105 @@ export const liveClassService = {
     });
 
     return updated;
+  },
+
+  // Trainer: get own verified specialization
+  getTrainerSpecialization: async (userId: string): Promise<TrainerSpecializationResponseDto> => {
+    const trainer = await resolveTrainer(userId);
+    return { specialization: trainer.specialization };
+  },
+
+  // User: direct class join with subscription-to-trainer authorization
+  joinClass: async (userId: string, classId: string): Promise<JoinLiveClassResponseDto> => {
+    // 1. Find LiveClass by id with associated Trainer
+    const liveClass = await prisma.liveClass.findUnique({
+      where: { id: classId },
+      include: { trainer: true },
+    });
+
+    if (!liveClass) {
+      const error = new Error('Class not found.') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    // 2. Reject CANCELLED class
+    if (liveClass.status === LiveClassStatus.CANCELLED) {
+      const error = new Error('This class has been cancelled.') as Error & { status: number };
+      error.status = 409;
+      throw error;
+    }
+
+    // 3. Require trainer to be active
+    if (!liveClass.trainer || !liveClass.trainer.isActive) {
+      const error = new Error('Trainer account is inactive.') as Error & { status: number };
+      error.status = 403;
+      throw error;
+    }
+
+    // 4. Find an ACTIVE, non-expired subscription whose plan.trainerId matches liveClass.trainerId
+    const now = new Date();
+    const activeSubscription = await prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: SubscriptionStatus.ACTIVE,
+        endDate: { gt: now },
+        plan: {
+          trainerId: liveClass.trainerId,
+        },
+      },
+    });
+
+    if (!activeSubscription) {
+      const error = new Error('An active subscription with this trainer is required to join this class.') as Error & { status: number };
+      error.status = 403;
+      throw error;
+    }
+
+    // 5. Enforce join window: earliest = startTime - 15 minutes, latest = endTime
+    const startTime = new Date(liveClass.startTime);
+    const endTime = new Date(liveClass.endTime);
+    const joinStartTime = new Date(startTime.getTime() - 15 * 60000);
+
+    if (now < joinStartTime) {
+      const error = new Error('The class has not started yet. You can join up to 15 minutes before the start time.') as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (now > endTime) {
+      const error = new Error('The class has already ended.') as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    // 6. Require meetingUrl
+    if (!liveClass.meetingUrl) {
+      const error = new Error('Meeting URL is not available for this class.') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
+    // 7. Record successful join: idempotent upsert ClassBooking with status = ATTENDED
+    await prisma.classBooking.upsert({
+      where: {
+        userId_liveClassId: {
+          userId,
+          liveClassId: classId,
+        },
+      },
+      create: {
+        userId,
+        liveClassId: classId,
+        status: BookingStatus.ATTENDED,
+        bookedAt: now,
+      },
+      update: {
+        status: BookingStatus.ATTENDED,
+      },
+    });
+
+    // 8. Return meetingUrl
+    return { meetingUrl: liveClass.meetingUrl };
   },
 };

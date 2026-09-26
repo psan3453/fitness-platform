@@ -72,3 +72,15 @@ export async function getTrainerClassAction(id: string) {
     return { success: false, error: 'An unexpected error occurred while fetching the class.' };
   }
 }
+
+export async function getTrainerSpecializationAction() {
+  try {
+    const response = await fetchApi<{ specialization: LiveClassCategory }>('/api/trainer/classes/specialization');
+    return { success: true, specialization: response.specialization };
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: 'Failed to retrieve trainer specialization.' };
+  }
+}

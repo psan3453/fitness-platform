@@ -22,8 +22,8 @@ export const liveClassController = {
         return;
       }
       const err = error as Error & { status?: number };
-      if (err.status === 403) {
-        res.status(403).json({ message: err.message });
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
         return;
       }
       console.error('[liveClassController.createClass]', error);
@@ -164,6 +164,49 @@ export const liveClassController = {
         return;
       }
       console.error('[liveClassController.updateClassStatus]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  // Trainer: get own verified specialization
+  getTrainerSpecialization: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+      const result = await liveClassService.getTrainerSpecialization(userId);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[liveClassController.getTrainerSpecialization]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  // User: direct class join
+  joinClass: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+      const classId = req.params.id as string;
+      const result = await liveClassService.joinClass(userId, classId);
+      res.status(200).json(result);
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[liveClassController.joinClass]', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },

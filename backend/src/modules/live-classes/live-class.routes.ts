@@ -21,6 +21,13 @@ trainerClassRoutes.get(
 );
 
 trainerClassRoutes.get(
+  '/specialization',
+  requireAuth,
+  requireRole(UserRole.TRAINER),
+  liveClassController.getTrainerSpecialization
+);
+
+trainerClassRoutes.get(
   '/:id',
   requireAuth,
   requireRole(UserRole.TRAINER),
@@ -47,6 +54,12 @@ userClassRoutes.get(
   '/:id',
   requireAuth,
   liveClassController.getClassDetails
+);
+
+userClassRoutes.post(
+  '/:id/join',
+  requireAuth,
+  liveClassController.joinClass
 );
 
 // Admin routes: /api/admin/classes

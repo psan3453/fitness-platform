@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { LiveClass } from '@/lib/types/classes';
-import { bookClassAction, joinClassAction } from '../actions';
+import { joinClassAction } from '../actions';
 
 interface ClassCardProps {
   liveClass: LiveClass;
-  isBooked: boolean;
-  bookingId?: string;
+  isSubscribed: boolean;
 }
 
 const categoryColors: Record<string, { bg: string; text: string; accent: string }> = {
@@ -34,10 +34,7 @@ function formatDateTime(iso: string): { date: string; time: string } {
   return { date, time };
 }
 
-export default function ClassCard({ liveClass, isBooked: initialIsBooked, bookingId: initialBookingId }: ClassCardProps) {
-  const [isBooked, setIsBooked] = useState(initialIsBooked);
-  const [bookingId, setBookingId] = useState<string | undefined>(initialBookingId);
-  const [isBooking, setIsBooking] = useState(false);
+export default function ClassCard({ liveClass, isSubscribed }: ClassCardProps) {
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,33 +46,22 @@ export default function ClassCard({ liveClass, isBooked: initialIsBooked, bookin
 
   const { date, time: startTime } = formatDateTime(liveClass.startTime);
   const { time: endTime } = formatDateTime(liveClass.endTime);
-  const isPast = new Date(liveClass.startTime) < new Date();
-  const canBook = !isBooked && !isPast && liveClass.status === 'SCHEDULED';
 
-  const handleBook = async () => {
-    setIsBooking(true);
-    setError(null);
+  const now = new Date();
+  const classStart = new Date(liveClass.startTime);
+  const classEnd = new Date(liveClass.endTime);
+  const joinOpenTime = new Date(classStart.getTime() - 15 * 60000);
 
-    const result = await bookClassAction(liveClass.id);
-
-    if (result.success) {
-      setIsBooked(true);
-      if (result.booking?.id) {
-        setBookingId(result.booking.id);
-      }
-    } else {
-      setError(result.error || 'Failed to book class.');
-    }
-
-    setIsBooking(false);
-  };
+  const isCancelled = liveClass.status === 'CANCELLED';
+  const isPast = now > classEnd;
+  const isUpcoming = now < joinOpenTime;
+  const isWithinJoinWindow = now >= joinOpenTime && now <= classEnd && !isCancelled;
 
   const handleJoin = async () => {
-    if (!bookingId) return;
     setIsJoining(true);
     setError(null);
 
-    const result = await joinClassAction(bookingId);
+    const result = await joinClassAction(liveClass.id);
 
     if (result.success && result.meetingUrl) {
       window.open(result.meetingUrl, '_blank', 'noopener,noreferrer');
@@ -92,7 +78,7 @@ export default function ClassCard({ liveClass, isBooked: initialIsBooked, bookin
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${colors.accent} ${colors.text}`}>
           {liveClass.category}
         </span>
-        <span className="text-sm font-medium text-gray-700">
+        <span className={`text-sm font-medium ${isCancelled ? 'text-red-600 font-semibold' : 'text-gray-700'}`}>
           {liveClass.status}
         </span>
       </div>
@@ -137,70 +123,60 @@ export default function ClassCard({ liveClass, isBooked: initialIsBooked, bookin
             {error}
           </div>
         )}
-        {isBooked ? (
-          bookingId ? (
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-1 flex justify-center items-center py-2.5 px-3 border border-transparent rounded-md text-sm font-medium text-green-700 bg-green-100">
-                <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-                Booked
-              </div>
-              <button
-                type="button"
-                onClick={handleJoin}
-                disabled={isJoining}
-                className="flex-1 flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
-              >
-                {isJoining ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Joining...
-                  </span>
-                ) : (
-                  'Join Class'
-                )}
-              </button>
-            </div>
-          ) : (
-            <button
-              disabled
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-green-700 bg-green-100 cursor-not-allowed"
-            >
-              <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-              Booked
-            </button>
-          )
-        ) : (
-          <button
-            onClick={handleBook}
-            disabled={!canBook || isBooking}
-            className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium transition-colors ${
-              canBook
-                ? 'text-white bg-blue-600 hover:bg-blue-700'
-                : 'text-gray-500 bg-gray-200 cursor-not-allowed'
-            }`}
+
+        {!isSubscribed ? (
+          <Link
+            href="/subscriptions"
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors"
           >
-            {isBooking ? (
+            Subscribe to Trainer
+          </Link>
+        ) : isCancelled ? (
+          <button
+            disabled
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-red-700 bg-red-100 cursor-not-allowed"
+          >
+            Class Cancelled
+          </button>
+        ) : isPast ? (
+          <button
+            disabled
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-500 bg-gray-200 cursor-not-allowed"
+          >
+            Class Ended
+          </button>
+        ) : isUpcoming ? (
+          <button
+            disabled
+            className="w-full flex justify-center py-2.5 px-4 border border-gray-200 rounded-md shadow-sm text-sm font-medium text-gray-500 bg-gray-100 cursor-not-allowed"
+          >
+            Join opens 15m prior
+          </button>
+        ) : isWithinJoinWindow ? (
+          <button
+            type="button"
+            onClick={handleJoin}
+            disabled={isJoining}
+            className="w-full flex justify-center items-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 disabled:bg-green-400 transition-colors"
+          >
+            {isJoining ? (
               <span className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Booking...
+                Joining...
               </span>
-            ) : isPast ? (
-              'Class Ended'
-            ) : liveClass.status !== 'SCHEDULED' ? (
-              liveClass.status
             ) : (
-              'Book Class'
+              'Join Class'
             )}
+          </button>
+        ) : (
+          <button
+            disabled
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-gray-500 bg-gray-200 cursor-not-allowed"
+          >
+            {liveClass.status}
           </button>
         )}
       </div>

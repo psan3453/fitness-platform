@@ -2,26 +2,10 @@ import { Request, Response } from 'express';
 import { bookingService } from './booking.service';
 
 export const bookingController = {
-  bookClass: async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({ message: 'Authentication required.' });
-        return;
-      }
-
-      const classId = req.params.id as string;
-      const booking = await bookingService.bookClass(userId, classId);
-      res.status(201).json({ booking });
-    } catch (error: unknown) {
-      const err = error as Error & { status?: number };
-      if (err.status && err.status >= 400 && err.status < 500) {
-        res.status(err.status).json({ message: err.message });
-        return;
-      }
-      console.error('[bookingController.bookClass]', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
+  bookClass: async (_req: Request, res: Response): Promise<void> => {
+    res.status(410).json({
+      message: 'Class booking has been retired. Subscribed users can join live classes directly via POST /api/classes/:id/join.',
+    });
   },
 
   getMyBookings: async (req: Request, res: Response): Promise<void> => {
@@ -62,25 +46,9 @@ export const bookingController = {
     }
   },
 
-  joinClass: async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.user?.userId;
-      if (!userId) {
-        res.status(401).json({ message: 'Authentication required.' });
-        return;
-      }
-
-      const bookingId = req.params.id as string;
-      const result = await bookingService.joinClass(userId, bookingId);
-      res.status(200).json(result);
-    } catch (error: unknown) {
-      const err = error as Error & { status?: number };
-      if (err.status && err.status >= 400 && err.status < 500) {
-        res.status(err.status).json({ message: err.message });
-        return;
-      }
-      console.error('[bookingController.joinClass]', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
+  joinClass: async (_req: Request, res: Response): Promise<void> => {
+    res.status(410).json({
+      message: 'Booking-based class joining has been retired. Please use direct join via POST /api/classes/:id/join.',
+    });
   },
 };
