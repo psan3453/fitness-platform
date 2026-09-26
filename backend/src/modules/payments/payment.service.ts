@@ -5,9 +5,12 @@ import { CreateOrderRequestDto, CreateOrderResponseDto, VerifyPaymentRequestDto,
 
 export const paymentService = {
   createOrder: async (userId: string, data: CreateOrderRequestDto): Promise<CreateOrderResponseDto> => {
-    // 1. Validate planId & fetch SubscriptionPlan directly from database
+    // 1. Validate planId & fetch SubscriptionPlan directly from database with trainer relation
     const plan = await prisma.subscriptionPlan.findUnique({
       where: { id: data.planId },
+      include: {
+        trainer: true,
+      },
     });
 
     if (!plan) {
@@ -22,6 +25,24 @@ export const paymentService = {
       throw error;
     }
 
+    if (!plan.trainerId) {
+      const error = new Error('This plan is not available for purchase.') as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (!plan.trainer) {
+      const error = new Error('Associated trainer not found.') as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
+    if (!plan.trainer.isActive) {
+      const error = new Error('Trainer is currently inactive.') as Error & { status: number };
+      error.status = 400;
+      throw error;
+    }
+
     if (plan.price.lessThanOrEqualTo(0)) {
       const error = new Error('Invalid subscription plan price.') as Error & { status: number };
       error.status = 400;
@@ -31,6 +52,26 @@ export const paymentService = {
     if (!plan.durationDays || plan.durationDays <= 0) {
       const error = new Error('Invalid subscription plan duration.') as Error & { status: number };
       error.status = 400;
+      throw error;
+    }
+
+    // 2. Best-effort duplicate check: existing ACTIVE subscription to the same trainer
+    const existingActiveSubscription = await prisma.subscription.findFirst({
+      where: {
+        userId,
+        status: 'ACTIVE',
+        endDate: {
+          gt: new Date(),
+        },
+        plan: {
+          trainerId: plan.trainerId,
+        },
+      },
+    });
+
+    if (existingActiveSubscription) {
+      const error = new Error('You already have an active subscription with this trainer.') as Error & { status: number };
+      error.status = 409;
       throw error;
     }
 
@@ -242,6 +283,56 @@ export const paymentService = {
 
     try {
       await prisma.$transaction(async (tx) => {
+        // 6a. Serialize verification transactions for this user by locking user row
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+
+        // 6b. Resolve trainer and validate active status
+        const planTrainerId = payment.subscription.plan.trainerId;
+        if (!planTrainerId) {
+          const error = new Error('This plan is not available for purchase.') as Error & { status: number };
+          error.status = 400;
+          throw error;
+        }
+
+        const trainer = await tx.trainer.findUnique({
+          where: { id: planTrainerId },
+        });
+
+        if (!trainer) {
+          const error = new Error('Associated trainer not found.') as Error & { status: number };
+          error.status = 400;
+          throw error;
+        }
+
+        if (!trainer.isActive) {
+          const error = new Error('Trainer is currently inactive.') as Error & { status: number };
+          error.status = 400;
+          throw error;
+        }
+
+        // 6c. Authoritative duplicate check: user must not already have an ACTIVE subscription to this trainer
+        const existingActiveSub = await tx.subscription.findFirst({
+          where: {
+            userId,
+            status: 'ACTIVE',
+            endDate: {
+              gt: now,
+            },
+            plan: {
+              trainerId: planTrainerId,
+            },
+            NOT: {
+              id: payment.subscriptionId,
+            },
+          },
+        });
+
+        if (existingActiveSub) {
+          const error = new Error('You already have an active subscription with this trainer.') as Error & { status: number };
+          error.status = 409;
+          throw error;
+        }
+
         // Atomic conditional update: only update if status is still PENDING
         const updateResult = await tx.payment.updateMany({
           where: {
