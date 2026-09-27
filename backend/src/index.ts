@@ -9,7 +9,7 @@ import { adminSubscriptionPlanRoutes, adminSubscriptionRoutes, userSubscriptionP
 import { trainerClassRoutes, userClassRoutes, adminClassRoutes } from './modules/live-classes/live-class.routes';
 import { trainerPlanRoutes } from './modules/trainer-plans/trainer-plan.routes';
 import { bookingActionRoutes, bookingRoutes } from './modules/bookings/booking.routes';
-import { dietPlanCreatorRoutes, dietPlanPublicRoutes } from './modules/diet-plans/diet-plan.routes';
+import { dietPlanCreatorRoutes, dietPlanPublicRoutes, trainerDietPlanRoutes } from './modules/diet-plans/diet-plan.routes';
 import { paymentRoutes } from './modules/payments/payment.routes';
 
 dotenv.config();
@@ -32,6 +32,7 @@ app.use('/api/subscriptions', userSubscriptionRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/trainer/plans', trainerPlanRoutes);
 app.use('/api/trainer/classes', trainerClassRoutes);
+app.use('/api/trainer/diet-plans', trainerDietPlanRoutes);
 app.use('/api/classes', userClassRoutes);
 app.use('/api/classes', bookingActionRoutes);
 app.use('/api/bookings', bookingRoutes);

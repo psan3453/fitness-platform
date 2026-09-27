@@ -222,6 +222,18 @@ export default async function TrainerDashboardPage() {
                 </div>
               </Link>
 
+              <Link href="/trainer/diet-plans" className="flex items-center p-4 hover:bg-gray-50 rounded-lg transition-colors group">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg group-hover:bg-emerald-100 transition-colors">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-900">Manage Diet Plans</p>
+                  <p className="text-xs text-gray-500">Create and edit diet plans</p>
+                </div>
+              </Link>
+
               <Link href="/trainer/profile" className="flex items-center p-4 hover:bg-gray-50 rounded-lg transition-colors group">
                 <div className="p-2 bg-orange-50 text-orange-600 rounded-lg group-hover:bg-orange-100 transition-colors">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

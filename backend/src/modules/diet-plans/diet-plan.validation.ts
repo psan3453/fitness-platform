@@ -14,6 +14,7 @@ export const dietPlanValidation = {
     title: z.string().trim().min(1, 'Title is required'),
     goal: z.nativeEnum(DietGoal, { message: 'Invalid diet goal' }),
     description: z.string().trim().nullable().optional(),
+    trainerId: z.string().trim().optional(),
     items: z.array(dietPlanItemSchema).min(1, 'At least one item is required'),
   }).strict().refine((data) => {
     const orders = data.items.map(i => i.displayOrder);

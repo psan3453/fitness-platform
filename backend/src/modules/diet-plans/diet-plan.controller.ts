@@ -4,7 +4,53 @@ import { dietPlanValidation } from './diet-plan.validation';
 import { ZodError } from 'zod';
 
 export const dietPlanController = {
-  create: async (req: Request, res: Response): Promise<void> => {
+  // ============================================================
+  // SUBSCRIBER / USER HANDLERS
+  // ============================================================
+
+  getSubscriberPlans: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const plans = await dietPlanService.getSubscriberPlans(userId);
+      res.status(200).json({ dietPlans: plans });
+    } catch (error: unknown) {
+      console.error('[dietPlanController.getSubscriberPlans]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  getSubscriberPlanById: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const planId = req.params.id as string;
+      const plan = await dietPlanService.getSubscriberPlanById(userId, planId);
+      res.status(200).json({ dietPlan: plan });
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[dietPlanController.getSubscriberPlanById]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  // ============================================================
+  // ADMIN HANDLERS
+  // ============================================================
+
+  adminCreate: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.userId;
       if (!userId) {
@@ -13,7 +59,7 @@ export const dietPlanController = {
       }
 
       const parsed = dietPlanValidation.createSchema.parse(req.body);
-      const plan = await dietPlanService.create(userId, parsed);
+      const plan = await dietPlanService.adminCreatePlan(userId, parsed);
       res.status(201).json({ dietPlan: plan });
     } catch (error: unknown) {
       if (error instanceof ZodError) {
@@ -25,63 +71,38 @@ export const dietPlanController = {
         res.status(err.status).json({ message: err.message });
         return;
       }
-      console.error('[dietPlanController.create]', error);
+      console.error('[dietPlanController.adminCreate]', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
 
-  getActivePlans: async (req: Request, res: Response): Promise<void> => {
-    try {
-      const plans = await dietPlanService.getActivePlans();
-      res.status(200).json({ dietPlans: plans });
-    } catch (error: unknown) {
-      console.error('[dietPlanController.getActivePlans]', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  },
-
-  getActivePlanById: async (req: Request, res: Response): Promise<void> => {
-    try {
-      const plan = await dietPlanService.getActivePlanById(req.params.id as string);
-      if (!plan) {
-        res.status(404).json({ message: 'Diet plan not found.' });
-        return;
-      }
-      res.status(200).json({ dietPlan: plan });
-    } catch (error: unknown) {
-      console.error('[dietPlanController.getActivePlanById]', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  },
-
-  getMyPlans: async (req: Request, res: Response): Promise<void> => {
+  adminGetPlans: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.userId;
-      const role = req.user?.role;
-      if (!userId || !role) {
+      if (!userId) {
         res.status(401).json({ message: 'Authentication required.' });
         return;
       }
 
-      const plans = await dietPlanService.getMyPlans(userId, role);
+      const plans = await dietPlanService.adminGetAllPlans();
       res.status(200).json({ dietPlans: plans });
     } catch (error: unknown) {
-      console.error('[dietPlanController.getMyPlans]', error);
+      console.error('[dietPlanController.adminGetPlans]', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
 
-  update: async (req: Request, res: Response): Promise<void> => {
+  adminUpdate: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.userId;
-      const role = req.user?.role;
-      if (!userId || !role) {
+      if (!userId) {
         res.status(401).json({ message: 'Authentication required.' });
         return;
       }
 
+      const planId = req.params.id as string;
       const parsed = dietPlanValidation.updateSchema.parse(req.body);
-      const plan = await dietPlanService.update(req.params.id as string, userId, role, parsed);
+      const plan = await dietPlanService.adminUpdatePlan(planId, parsed);
       res.status(200).json({ dietPlan: plan });
     } catch (error: unknown) {
       if (error instanceof ZodError) {
@@ -93,21 +114,21 @@ export const dietPlanController = {
         res.status(err.status).json({ message: err.message });
         return;
       }
-      console.error('[dietPlanController.update]', error);
+      console.error('[dietPlanController.adminUpdate]', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
 
-  delete: async (req: Request, res: Response): Promise<void> => {
+  adminDelete: async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user?.userId;
-      const role = req.user?.role;
-      if (!userId || !role) {
+      if (!userId) {
         res.status(401).json({ message: 'Authentication required.' });
         return;
       }
 
-      await dietPlanService.delete(req.params.id as string, userId, role);
+      const planId = req.params.id as string;
+      await dietPlanService.adminDeletePlan(planId);
       res.status(200).json({ message: 'Diet plan deleted successfully.' });
     } catch (error: unknown) {
       const err = error as Error & { status?: number };
@@ -115,7 +136,131 @@ export const dietPlanController = {
         res.status(err.status).json({ message: err.message });
         return;
       }
-      console.error('[dietPlanController.delete]', error);
+      console.error('[dietPlanController.adminDelete]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+};
+
+export const trainerDietPlanController = {
+  // ============================================================
+  // TRAINER HANDLERS
+  // ============================================================
+
+  getPlans: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const plans = await dietPlanService.getTrainerPlans(userId);
+      res.status(200).json({ dietPlans: plans });
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[trainerDietPlanController.getPlans]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  createPlan: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const parsed = dietPlanValidation.createSchema.parse(req.body);
+      const plan = await dietPlanService.createTrainerPlan(userId, parsed);
+      res.status(201).json({ dietPlan: plan });
+    } catch (error: unknown) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Validation failed.', errors: error.issues });
+        return;
+      }
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[trainerDietPlanController.createPlan]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  getPlanById: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const planId = req.params.id as string;
+      const plan = await dietPlanService.getTrainerPlanById(userId, planId);
+      res.status(200).json({ dietPlan: plan });
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[trainerDietPlanController.getPlanById]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  updatePlan: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const planId = req.params.id as string;
+      const parsed = dietPlanValidation.updateSchema.parse(req.body);
+      const plan = await dietPlanService.updateTrainerPlan(userId, planId, parsed);
+      res.status(200).json({ dietPlan: plan });
+    } catch (error: unknown) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ message: 'Validation failed.', errors: error.issues });
+        return;
+      }
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[trainerDietPlanController.updatePlan]', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+
+  deletePlan: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ message: 'Authentication required.' });
+        return;
+      }
+
+      const planId = req.params.id as string;
+      await dietPlanService.deleteTrainerPlan(userId, planId);
+      res.status(200).json({ message: 'Diet plan deleted successfully.' });
+    } catch (error: unknown) {
+      const err = error as Error & { status?: number };
+      if (err.status && err.status >= 400 && err.status < 500) {
+        res.status(err.status).json({ message: err.message });
+        return;
+      }
+      console.error('[trainerDietPlanController.deletePlan]', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },

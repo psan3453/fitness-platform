@@ -9,9 +9,18 @@ export interface DietPlanItem {
   displayOrder: number;
 }
 
+export interface TrainerInfo {
+  id: string;
+  name: string;
+  specialization: string;
+  profileImageUrl: string | null;
+}
+
 export interface DietPlan {
   id: string;
   creatorId: string;
+  trainerId?: string | null;
+  trainer?: TrainerInfo | null;
   title: string;
   goal: DietGoal;
   description: string | null;
@@ -23,4 +32,8 @@ export interface DietPlan {
 
 export interface DietPlansResponse {
   dietPlans: DietPlan[];
+}
+
+export interface SingleDietPlanResponse {
+  dietPlan: DietPlan;
 }

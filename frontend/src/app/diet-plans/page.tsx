@@ -8,7 +8,7 @@ interface DietPlansPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-async function fetchDietPlans(): Promise<DietPlan[]> {
+async function fetchSubscribedDietPlans(): Promise<DietPlan[]> {
   try {
     const data = await fetchApi<DietPlansResponse>('/api/diet-plans');
     return data.dietPlans;
@@ -37,7 +37,7 @@ export default async function DietPlansPage({ searchParams }: DietPlansPageProps
 
   const resolvedParams = await searchParams;
   const goalParam = typeof resolvedParams.goal === 'string' ? resolvedParams.goal : undefined;
-  const allPlans = await fetchDietPlans();
+  const allPlans = await fetchSubscribedDietPlans();
   const filteredPlans = goalParam
     ? allPlans.filter((plan) => plan.goal === goalParam)
     : allPlans;
@@ -48,48 +48,66 @@ export default async function DietPlansPage({ searchParams }: DietPlansPageProps
         {/* ── Header ──────────────────────────────────────────── */}
         <section className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Diet Plans
+            Your Trainer Diet Plans
           </h1>
           <p className="text-gray-600">
-            Explore structured nutrition plans designed to help you reach your goals.
+            Nutrition and structured meal plans provided by your subscribed trainers.
           </p>
         </section>
 
-        {/* ── Category Filter ─────────────────────────────────── */}
-        <section className="mb-10 flex space-x-2 overflow-x-auto pb-2">
-          {GOALS.map((goal) => {
-            const isActive = goalParam === goal.value || (!goalParam && !goal.value);
-            const href = goal.value ? `/diet-plans?goal=${goal.value}` : '/diet-plans';
-            return (
-              <Link
-                key={goal.name}
-                href={href}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {goal.name}
-              </Link>
-            );
-          })}
-        </section>
+        {/* ── Category Filter (Only if user has plans) ────────── */}
+        {allPlans.length > 0 && (
+          <section className="mb-10 flex space-x-2 overflow-x-auto pb-2">
+            {GOALS.map((goal) => {
+              const isActive = goalParam === goal.value || (!goalParam && !goal.value);
+              const href = goal.value ? `/diet-plans?goal=${goal.value}` : '/diet-plans';
+              return (
+                <Link
+                  key={goal.name}
+                  href={href}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {goal.name}
+                </Link>
+              );
+            })}
+          </section>
+        )}
 
         {/* ── Plans Grid ──────────────────────────────────────── */}
         <section>
           {filteredPlans.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
               {filteredPlans.map((plan) => (
-                <div key={plan.id} className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden hover:shadow-md transition-shadow">
+                <div
+                  key={plan.id}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden hover:shadow-md transition-shadow"
+                >
                   {/* Plan Header */}
                   <div className="p-6 border-b border-gray-100 bg-gray-50">
                     <div className="flex items-center justify-between mb-3">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 tracking-wide">
                         {plan.goal.replace('_', ' ')}
                       </span>
+                      {plan.trainer && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                          {plan.trainer.specialization}
+                        </span>
+                      )}
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{plan.title}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-1">{plan.title}</h2>
+                    {plan.trainer && (
+                      <div className="flex items-center gap-2 mb-3 mt-1 text-sm text-gray-600">
+                        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                        </svg>
+                        <span>Trainer: <strong className="text-gray-800">{plan.trainer.name}</strong></span>
+                      </div>
+                    )}
                     {plan.description && (
                       <p className="text-sm text-gray-600 line-clamp-3">
                         {plan.description}
@@ -130,18 +148,20 @@ export default async function DietPlansPage({ searchParams }: DietPlansPageProps
               <h3 className="text-lg font-medium text-gray-900 mb-1">
                 No diet plans available
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-500 max-w-md mx-auto">
                 {goalParam
-                  ? `There are currently no active diet plans for ${goalParam.replace('_', ' ')}.`
-                  : 'Check back later for new structured nutrition plans.'}
+                  ? `There are currently no active diet plans for ${goalParam.replace('_', ' ')} from your subscribed trainers.`
+                  : 'You do not currently have any diet plans from your subscribed trainers. When your subscribed trainers publish nutrition plans, they will appear here.'}
               </p>
-              {goalParam&&(
-                <Link
-                  href="/diet-plans"
-                  className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  View All Diet Plans
-                </Link>
+              {goalParam && (
+                <div className="mt-4">
+                  <Link
+                    href="/diet-plans"
+                    className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    View All Subscribed Plans
+                  </Link>
+                </div>
               )}
             </div>
           )}
