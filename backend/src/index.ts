@@ -11,6 +11,7 @@ import { trainerPlanRoutes } from './modules/trainer-plans/trainer-plan.routes';
 import { bookingActionRoutes, bookingRoutes } from './modules/bookings/booking.routes';
 import { dietPlanCreatorRoutes, dietPlanPublicRoutes, trainerDietPlanRoutes } from './modules/diet-plans/diet-plan.routes';
 import { paymentRoutes } from './modules/payments/payment.routes';
+import { trainerDiscoveryRoutes } from './modules/trainers/trainer.routes';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/subscription-plans', userSubscriptionPlanRoutes);
 app.use('/api/subscriptions', userSubscriptionRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/trainers', trainerDiscoveryRoutes);
 app.use('/api/trainer/plans', trainerPlanRoutes);
 app.use('/api/trainer/classes', trainerClassRoutes);
 app.use('/api/trainer/diet-plans', trainerDietPlanRoutes);

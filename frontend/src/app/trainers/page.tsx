@@ -1,165 +1,278 @@
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { getAuthUser } from '@/lib/auth/session';
 import { fetchApi, ApiError } from '@/lib/api/fetcher';
-import { TrainerApplicationsResponse, TrainerApplication } from '@/lib/types/trainer';
-import TrainerApplicationForm from './components/TrainerApplicationForm';
+import { TrainersResponse, TrainerSummary } from '@/lib/types/trainer';
 
-async function fetchMyApplications(): Promise<TrainerApplication[]> {
+interface TrainersPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+async function fetchTrainers(search?: string, specialization?: string): Promise<TrainerSummary[]> {
   try {
-    const response = await fetchApi<TrainerApplicationsResponse>('/api/trainer-applications/me');
-    return response.applications;
+    const params = new URLSearchParams();
+    if (search && search.trim()) params.set('search', search.trim());
+    if (specialization && specialization !== 'ALL') params.set('specialization', specialization);
+
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const data = await fetchApi<TrainersResponse>(`/api/trainers${qs}`);
+    return data.trainers;
   } catch (error) {
     if (error instanceof ApiError) {
-      console.error('[trainers] failed to fetch applications:', error.status, error.message);
+      console.error('[trainers] fetch failed:', error.status, error.message);
+    } else {
+      console.error('[trainers] unexpected error:', error);
     }
     return [];
   }
 }
 
-export default async function TrainersPage() {
-  const user = await getAuthUser();
+const CATEGORIES: { label: string; value: string }[] = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Yoga', value: 'YOGA' },
+  { label: 'Zumba', value: 'ZUMBA' },
+  { label: 'HIIT', value: 'HIIT' },
+];
 
-  if (!user) {
-    redirect('/login');
+const categoryBadgeStyles: Record<string, { bg: string; text: string; avatarBg: string; avatarText: string }> = {
+  YOGA: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', avatarBg: 'bg-emerald-100', avatarText: 'text-emerald-800' },
+  ZUMBA: { bg: 'bg-pink-50 border-pink-200', text: 'text-pink-700', avatarBg: 'bg-pink-100', avatarText: 'text-pink-800' },
+  HIIT: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700', avatarBg: 'bg-orange-100', avatarText: 'text-orange-800' },
+};
+
+function getInitials(name: string): string {
+  if (!name || !name.trim()) return 'TR';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   }
+  return name.slice(0, 2).toUpperCase();
+}
 
-  const applications = await fetchMyApplications();
-  
-  // Find if there is an active application to determine state.
-  // We care about PENDING or APPROVED. If only REJECTED exists, they can reapply.
-  const activeApplication = applications.find(
-    (app) => app.status === 'PENDING' || app.status === 'APPROVED'
-  );
+function formatPrice(price: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
+}
 
-  const mostRecentRejected = applications.find((app) => app.status === 'REJECTED');
-  const canApply = !activeApplication;
+export default async function TrainersPage({ searchParams }: TrainersPageProps) {
+  const resolvedParams = await searchParams;
+  const search = typeof resolvedParams.search === 'string' ? resolvedParams.search : undefined;
+  const specialization =
+    typeof resolvedParams.specialization === 'string' ? resolvedParams.specialization.toUpperCase() : 'ALL';
+
+  const trainers = await fetchTrainers(search, specialization);
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* State 2: PENDING */}
-        {activeApplication?.status === 'PENDING' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-blue-50 border-b border-blue-100 p-6 flex flex-col sm:flex-row items-center sm:justify-between text-center sm:text-left gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-1">Application Under Review</h1>
-                <p className="text-gray-600">
-                  Your trainer application has been submitted and is waiting for admin review.
-                </p>
-              </div>
-              <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold bg-blue-100 text-blue-700 tracking-wide">
-                PENDING
-              </span>
-            </div>
-            <div className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Application Details</h3>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                <div>
-                  <dt className="text-gray-500 mb-1">Specialization</dt>
-                  <dd className="font-medium text-gray-900">{activeApplication.specialization}</dd>
-                </div>
-                <div>
-                  <dt className="text-gray-500 mb-1">Submitted On</dt>
-                  <dd className="font-medium text-gray-900">
-                    {new Date(activeApplication.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
-                  </dd>
-                </div>
-                <div className="sm:col-span-2">
-                  <dt className="text-gray-500 mb-1">Bio</dt>
-                  <dd className="text-gray-900">{activeApplication.bio || 'Not provided'}</dd>
-                </div>
-              </dl>
-              <div className="mt-8 pt-6 border-t border-gray-100 text-center">
-                <Link href="/dashboard" className="text-blue-600 hover:text-blue-700 font-medium">
-                  &larr; Return to Dashboard
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* State 2: APPROVED */}
-        {activeApplication?.status === 'APPROVED' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 mb-6">
-              <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">You&apos;re a Trainer!</h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-lg mx-auto">
-              Your application has been approved. You can now access trainer functionality, create live classes, and manage your sessions.
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* ── Header ────────────────────────────────────────── */}
+        <section className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight">
+              Find Trainers
+            </h1>
+            <p className="mt-2 text-lg text-gray-600">
+              Discover certified trainers, explore their live classes, and subscribe for personalized coaching.
             </p>
-            <Link 
-              href="/dashboard" 
-              className="inline-flex justify-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700"
+          </div>
+          <div>
+            <Link
+              href="/trainers/apply"
+              className="inline-flex items-center px-4 py-2 rounded-lg border border-blue-600 text-blue-600 bg-white text-sm font-medium hover:bg-blue-50 transition-colors shadow-sm"
             >
-              Go to Dashboard
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Become a Trainer
             </Link>
           </div>
-        )}
+        </section>
 
-        {/* State 1: Application Form (No active application) */}
-        {canApply && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            {/* Header / Info Column */}
-            <div className="lg:col-span-5 flex flex-col justify-center">
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">
-                Become a Trainer
-              </h1>
-              <p className="text-lg text-gray-600 mb-8">
-                Share your expertise and help people train, move and transform.
-              </p>
-              
-              {mostRecentRejected && (
-                <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <h3 className="text-sm font-bold text-red-800 mb-1 flex items-center">
-                    <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                    Previous Application Rejected
-                  </h3>
-                  <p className="text-sm text-red-700 mb-3">
-                    Your previous application was not approved. You can submit a new application below.
-                  </p>
-                  {mostRecentRejected.rejectionReason && (
-                    <div className="text-sm bg-white/60 p-3 rounded text-red-800">
-                      <strong>Reason:</strong> {mostRecentRejected.rejectionReason}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-                <h3 className="font-semibold text-gray-900">As a trainer, you can:</h3>
-                <ul className="space-y-3">
-                  <li className="flex text-gray-600">
-                    <svg className="h-5 w-5 text-emerald-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Host live fitness classes
-                  </li>
-                  <li className="flex text-gray-600">
-                    <svg className="h-5 w-5 text-emerald-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Teach Yoga, Zumba or HIIT
-                  </li>
-                  <li className="flex text-gray-600">
-                    <svg className="h-5 w-5 text-emerald-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Build your trainer profile
-                  </li>
-                  <li className="flex text-gray-600">
-                    <svg className="h-5 w-5 text-emerald-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                    Help users reach their fitness goals
-                  </li>
-                </ul>
-              </div>
+        {/* ── Search and Filter Controls ─────────────────────── */}
+        <section className="mb-10 space-y-4">
+          {/* Search form */}
+          <form method="GET" action="/trainers" className="flex gap-2">
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                name="search"
+                defaultValue={search || ''}
+                placeholder="Search trainers by name or keyword..."
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+              />
+              <svg
+                className="absolute left-3 top-3 h-4 w-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
             </div>
+            {specialization && specialization !== 'ALL' && (
+              <input type="hidden" name="specialization" value={specialization} />
+            )}
+            <button
+              type="submit"
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition shadow-sm"
+            >
+              Search
+            </button>
+            {search && (
+              <Link
+                href={specialization && specialization !== 'ALL' ? `/trainers?specialization=${specialization}` : '/trainers'}
+                className="px-4 py-2.5 border border-gray-200 bg-white text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+              >
+                Clear
+              </Link>
+            )}
+          </form>
 
-            {/* Form Column */}
-            <div className="lg:col-span-7">
-              <TrainerApplicationForm />
-            </div>
+          {/* Category Filter Pills */}
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            {CATEGORIES.map((cat) => {
+              const isActive = specialization === cat.value;
+              const params = new URLSearchParams();
+              if (search) params.set('search', search);
+              if (cat.value !== 'ALL') params.set('specialization', cat.value);
+              const href = params.toString() ? `/trainers?${params.toString()}` : '/trainers';
+
+              return (
+                <Link
+                  key={cat.value}
+                  href={href}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {cat.label}
+                </Link>
+              );
+            })}
           </div>
-        )}
+        </section>
 
+        {/* ── Trainer Grid ───────────────────────────────────── */}
+        <section>
+          {trainers.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {trainers.map((trainer) => {
+                const badge = categoryBadgeStyles[trainer.specialization] || {
+                  bg: 'bg-gray-50 border-gray-200',
+                  text: 'text-gray-700',
+                  avatarBg: 'bg-gray-100',
+                  avatarText: 'text-gray-800',
+                };
+                const initials = getInitials(trainer.name);
+
+                return (
+                  <div
+                    key={trainer.id}
+                    className="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    <div className="p-6 flex-1 flex flex-col">
+                      {/* Top Header: Avatar + Category */}
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                          {trainer.profileImageUrl ? (
+                            <img
+                              src={trainer.profileImageUrl}
+                              alt={trainer.name}
+                              className="w-14 h-14 rounded-full object-cover border-2 border-gray-100 shadow-sm"
+                            />
+                          ) : (
+                            <div
+                              className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-base border-2 border-white shadow-sm ${badge.avatarBg} ${badge.avatarText}`}
+                            >
+                              {initials}
+                            </div>
+                          )}
+                          <div>
+                            <h2 className="text-xl font-bold text-gray-900 line-clamp-1">{trainer.name}</h2>
+                            {trainer.experience && (
+                              <p className="text-xs font-medium text-gray-500 mt-0.5">
+                                {trainer.experience} experience
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border ${badge.bg} ${badge.text}`}
+                        >
+                          {trainer.specialization}
+                        </span>
+                      </div>
+
+                      {/* Bio */}
+                      {trainer.bio ? (
+                        <p className="text-sm text-gray-600 line-clamp-3 mb-6">{trainer.bio}</p>
+                      ) : (
+                        <p className="text-sm text-gray-400 italic mb-6">Certified fitness professional ready to coach you.</p>
+                      )}
+
+                      {/* Metadata Chips / Stats */}
+                      <div className="mt-auto pt-4 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                          <p className="text-gray-500">Upcoming Classes</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                            {trainer.upcomingClassesCount}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2.5 text-center">
+                          <p className="text-gray-500">Pricing</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                            {trainer.startingPrice ? `From ${formatPrice(trainer.startingPrice)}` : 'Plans Available'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Footer Link */}
+                    <div className="p-4 bg-gray-50 border-t border-gray-100">
+                      <Link
+                        href={`/trainers/${trainer.id}`}
+                        className="w-full flex justify-center items-center py-2 px-4 rounded-xl text-sm font-semibold text-blue-600 bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors shadow-sm"
+                      >
+                        View Profile &rarr;
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center max-w-lg mx-auto">
+              <div className="w-16 h-16 rounded-full bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-4">
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">No trainers found</h3>
+              <p className="text-gray-500 text-sm mb-6">
+                {search || specialization !== 'ALL'
+                  ? 'No trainers matched your search criteria. Try removing filters or searching with different keywords.'
+                  : 'There are currently no active trainers available. Please check back soon.'}
+              </p>
+              {(search || specialization !== 'ALL') && (
+                <Link
+                  href="/trainers"
+                  className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition shadow-sm"
+                >
+                  View All Trainers
+                </Link>
+              )}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

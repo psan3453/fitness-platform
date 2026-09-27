@@ -21,9 +21,12 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
           <nav className="hidden md:block">
             <ul className="flex space-x-8">
               <li><Link href="/" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Home</Link></li>
+              <li><Link href="/trainers" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Find Trainers</Link></li>
               <li><Link href="/classes" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Classes</Link></li>
               <li><Link href="/diet-plans" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Diet Plans</Link></li>
-              <li><Link href="/trainers" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Become a Trainer</Link></li>
+              {user?.role !== 'TRAINER' && user?.role !== 'ADMIN' && (
+                <li><Link href="/trainers/apply" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Become a Trainer</Link></li>
+              )}
               {user?.role === 'ADMIN' && (
                   <li>
                       <Link
@@ -95,9 +98,12 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
         <nav className="md:hidden border-t border-gray-200 bg-white">
           <ul className="space-y-1 px-4 py-4">
             <li><Link href="/" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Home</Link></li>
+            <li><Link href="/trainers" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Find Trainers</Link></li>
             <li><Link href="/classes" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Classes</Link></li>
             <li><Link href="/diet-plans" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Diet Plans</Link></li>
-            <li><Link href="/trainers" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Become a Trainer</Link></li>
+            {user?.role !== 'TRAINER' && user?.role !== 'ADMIN' && (
+              <li><Link href="/trainers/apply" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Become a Trainer</Link></li>
+            )}
           </ul>
           <div className="border-t border-gray-200 px-4 py-4 flex flex-col space-y-3">
             {user ? (
