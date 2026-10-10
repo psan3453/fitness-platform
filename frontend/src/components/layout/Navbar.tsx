@@ -22,6 +22,10 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
             <ul className="flex space-x-8">
               <li><Link href="/" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Home</Link></li>
               <li><Link href="/trainers" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Find Trainers</Link></li>
+              <li><Link href="/subscriptions" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Plans</Link></li>
+              {user && user.role !== 'ADMIN' && (
+                <li><Link href="/my-trainers" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">My Trainers</Link></li>
+              )}
               <li><Link href="/classes" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Classes</Link></li>
               <li><Link href="/diet-plans" className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors">Diet Plans</Link></li>
               {user?.role !== 'TRAINER' && user?.role !== 'ADMIN' && (
@@ -99,6 +103,10 @@ export default function Navbar({ user }: { user: SafeUser | null }) {
           <ul className="space-y-1 px-4 py-4">
             <li><Link href="/" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Home</Link></li>
             <li><Link href="/trainers" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Find Trainers</Link></li>
+            <li><Link href="/subscriptions" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Plans</Link></li>
+            {user && user.role !== 'ADMIN' && (
+              <li><Link href="/my-trainers" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">My Trainers</Link></li>
+            )}
             <li><Link href="/classes" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Classes</Link></li>
             <li><Link href="/diet-plans" onClick={() => setMobileMenuOpen(false)} className="block rounded-md px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-blue-600 transition-colors">Diet Plans</Link></li>
             {user?.role !== 'TRAINER' && user?.role !== 'ADMIN' && (

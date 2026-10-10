@@ -4,6 +4,7 @@ import { getAuthUser } from '@/lib/auth/session';
 import { fetchApi, ApiError } from '@/lib/api/fetcher';
 import { UserSubscriptionsResponse, UserSubscription } from '@/lib/types/dashboard';
 import { SubscriptionPlansResponse, SubscriptionPlanDetail } from '@/lib/types/subscription';
+import { TrainerProfileResponse, TrainerProfile } from '@/lib/types/trainer';
 import PlanSubscribeButton from './PlanSubscribeButton';
 
 // ── Data Fetching ────────────────────────────────────────────
@@ -32,10 +33,25 @@ async function fetchMySubscriptions(): Promise<UserSubscription[]> {
   }
 }
 
+async function fetchTrainerProfile(trainerId: string): Promise<TrainerProfile | null> {
+  try {
+    const data = await fetchApi<TrainerProfileResponse>(`/api/trainers/${trainerId}`);
+    return data.trainer;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    console.error(`[subscriptions] fetch trainer profile (${trainerId}) failed:`, error);
+    return null;
+  }
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-IN', {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 'Invalid date';
+  return d.toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -57,6 +73,15 @@ const statusStyles: Record<string, { bg: string; text: string }> = {
   EXPIRED: { bg: 'bg-gray-100', text: 'text-gray-600' },
   CANCELLED: { bg: 'bg-red-100', text: 'text-red-700' },
 };
+
+function getInitials(name: string): string {
+  if (!name || !name.trim()) return 'TR';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 // ── Page ─────────────────────────────────────────────────────
 
@@ -83,6 +108,26 @@ export default async function SubscriptionsPage() {
   const pendingSub = subscriptions.find((s) => s.status === 'PENDING');
   const displaySubs = activeSubs.length > 0 ? activeSubs : (pendingSub ? [pendingSub] : []);
 
+  // Fetch trainer profiles for distinct trainers linked to display subscriptions
+  const distinctSubTrainerIds = Array.from(
+    new Set(
+      displaySubs
+        .map((s) => s.plan.trainerId)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  const trainerProfiles = await Promise.all(
+    distinctSubTrainerIds.map((id) => fetchTrainerProfile(id))
+  );
+
+  const trainerProfileMap = new Map<string, TrainerProfile>();
+  trainerProfiles.forEach((tp) => {
+    if (tp) {
+      trainerProfileMap.set(tp.id, tp);
+    }
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
@@ -104,30 +149,103 @@ export default async function SubscriptionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {displaySubs.map((sub) => {
                 const style = statusStyles[sub.status] ?? statusStyles.EXPIRED;
+                const trainerId = sub.plan.trainerId;
+                const trainer = trainerId ? trainerProfileMap.get(trainerId) : null;
+                const trainerName = trainer?.name || (trainerId ? 'Trainer' : null);
+                const specialization = trainer?.specialization;
+
                 return (
-                  <div key={sub.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">Active Membership</p>
-                        <h3 className="text-2xl font-bold text-gray-900">{sub.plan.name}</h3>
+                  <div key={sub.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 flex flex-col justify-between">
+                    <div>
+                      {/* Trainer Header if trainerId exists */}
+                      {trainerId ? (
+                        <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
+                          <div className="flex items-center space-x-3 min-w-0">
+                            {trainer?.profileImageUrl ? (
+                              <img
+                                src={trainer.profileImageUrl}
+                                alt={trainerName || 'Trainer'}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0 border border-blue-200">
+                                {getInitials(trainerName || 'TR')}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500 font-medium">Instructor</p>
+                              <Link
+                                href={`/trainers/${trainerId}`}
+                                className="font-semibold text-gray-900 hover:text-blue-600 transition-colors truncate block text-sm"
+                              >
+                                {trainerName}
+                              </Link>
+                              {specialization && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mt-0.5">
+                                  {specialization}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <Link
+                            href={`/trainers/${trainerId}`}
+                            className="inline-flex items-center px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors shrink-0 shadow-sm"
+                          >
+                            View Trainer →
+                          </Link>
+                        </div>
+                      ) : null}
+
+                      {/* Plan Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">Plan Details</p>
+                          <h3 className="text-2xl font-bold text-gray-900">{sub.plan.name}</h3>
+                          <p className="text-sm font-semibold text-gray-700 mt-0.5">
+                            {formatPrice(sub.plan.price)}
+                          </p>
+                        </div>
+                        <span className={`inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${style.bg} ${style.text}`}>
+                          {sub.status}
+                        </span>
                       </div>
-                      <span className={`inline-flex items-center self-start px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${style.bg} ${style.text}`}>
-                        {sub.status}
-                      </span>
+
+                      {/* Dates & Duration */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm mt-2">
+                        <div>
+                          <p className="text-gray-500">Started</p>
+                          <p className="font-medium text-gray-900">{formatDate(sub.startDate)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Ends</p>
+                          <p className="font-medium text-gray-900">{formatDate(sub.endDate)}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Duration</p>
+                          <p className="font-medium text-gray-900">{sub.plan.durationDays} days</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Started</p>
-                        <p className="font-medium text-gray-900">{formatDate(sub.startDate)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Ends</p>
-                        <p className="font-medium text-gray-900">{formatDate(sub.endDate)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Duration</p>
-                        <p className="font-medium text-gray-900">{sub.plan.durationDays} days</p>
-                      </div>
+
+                    {/* Footer Links */}
+                    <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
+                      {trainerId ? (
+                        <Link
+                          href={`/trainers/${trainerId}`}
+                          className="font-medium text-blue-600 hover:text-blue-700"
+                        >
+                          View Trainer Profile →
+                        </Link>
+                      ) : (
+                        <span className="text-gray-400">Platform Membership</span>
+                      )}
+                      <Link
+                        href="/dashboard"
+                        className="font-medium text-gray-500 hover:text-gray-700"
+                      >
+                        Dashboard →
+                      </Link>
                     </div>
                   </div>
                 );
@@ -169,27 +287,36 @@ export default async function SubscriptionsPage() {
                   >
                     <div className="p-6 flex-1">
                       {/* Trainer Header */}
-                      {plan.trainer && (
-                        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                          {plan.trainer.profileImageUrl ? (
-                            <img
-                              src={plan.trainer.profileImageUrl}
-                              alt={plan.trainer.name}
-                              className="w-11 h-11 rounded-full object-cover border border-gray-200"
-                            />
-                          ) : (
-                            <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0 border border-blue-200">
-                              {plan.trainer.name[0]?.toUpperCase() || 'T'}
+                      {plan.trainer && plan.trainerId && (
+                        <div className="flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {plan.trainer.profileImageUrl ? (
+                              <img
+                                src={plan.trainer.profileImageUrl}
+                                alt={plan.trainer.name}
+                                className="w-11 h-11 rounded-full object-cover border border-gray-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0 border border-blue-200">
+                                {plan.trainer.name[0]?.toUpperCase() || 'T'}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {plan.trainer.name}
+                              </p>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 mt-0.5">
+                                {plan.trainer.specialization}
+                              </span>
                             </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-gray-900 truncate">
-                              {plan.trainer.name}
-                            </p>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              {plan.trainer.specialization}
-                            </span>
                           </div>
+
+                          <Link
+                            href={`/trainers/${plan.trainerId}`}
+                            className="inline-flex items-center px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors shrink-0 shadow-sm"
+                          >
+                            View Profile →
+                          </Link>
                         </div>
                       )}
 
